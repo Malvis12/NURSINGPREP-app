@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# Supabase
+supabase/_incoming/
+supabase/.temp/
+
 # Logs
 logs
 *.log
