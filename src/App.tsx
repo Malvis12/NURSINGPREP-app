@@ -8,7 +8,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="border border-border bg-surface text-text px-3.5 py-1.5 text-sm font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98]"
+              className="border border-border hover:border-accent bg-surface text-text px-3.5 py-1.5 text-sm font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] hover:underline hover:decoration-accent"
             >
               Log in
             </button>
@@ -25,7 +25,7 @@ export default function App() {
       <main className="max-w-5xl mx-auto px-6 py-12 space-y-20">
         {/* Hero */}
         <section className="text-center max-w-3xl mx-auto space-y-6 pt-6">
-          <div className="text-xs uppercase font-extrabold tracking-widest text-muted">
+          <div className="text-xs uppercase font-extrabold tracking-widest text-accent">
             Nursing CBT preparation
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
@@ -43,7 +43,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              className="w-full sm:w-auto border border-border bg-surface text-text px-6 py-3 text-base font-semibold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98]"
+              className="w-full sm:w-auto border border-border hover:border-accent bg-surface text-text px-6 py-3 text-base font-semibold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98] hover:underline hover:decoration-accent"
             >
               Already have an account? Log in
             </button>
@@ -57,13 +57,19 @@ export default function App() {
         <section aria-label="Study cycle">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="border border-border bg-surface p-6 rounded-2xl">
-              <p className="font-bold text-base">01 Practice / Build a habit</p>
+              <p className="font-bold text-base">
+                <span className="text-accent">01</span> Practice / Build a habit
+              </p>
             </div>
             <div className="border border-border bg-surface p-6 rounded-2xl">
-              <p className="font-bold text-base">02 Understand / Learn from feedback</p>
+              <p className="font-bold text-base">
+                <span className="text-accent">02</span> Understand / Learn from feedback
+              </p>
             </div>
             <div className="border border-border bg-surface p-6 rounded-2xl">
-              <p className="font-bold text-base">03 Progress / Track your growth</p>
+              <p className="font-bold text-base">
+                <span className="text-accent">03</span> Progress / Track your growth
+              </p>
             </div>
           </div>
         </section>
@@ -115,7 +121,7 @@ export default function App() {
 
         {/* Get started */}
         <section className="border border-border bg-surface p-8 sm:p-12 rounded-3xl text-center max-w-3xl mx-auto space-y-6">
-          <div className="text-xs uppercase font-extrabold tracking-widest text-muted">
+          <div className="text-xs uppercase font-extrabold tracking-widest text-accent">
             Get started
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
