@@ -84,3 +84,10 @@ create policy "Users can update own profile"
 -- h) Revoke all permissions from anon
 revoke all on public.profiles from anon;
 revoke all on public.user_roles from anon;
+
+revoke insert, delete, truncate, references, trigger on public.profiles from authenticated;
+revoke insert, update, delete, truncate, references, trigger on public.user_roles from authenticated;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+
