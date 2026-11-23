@@ -19,6 +19,12 @@ export interface ExamQuestion {
 
 export interface ExamResultItem {
   id: string
+  topic?: string | null
+  question_text?: string
+  option_a?: string
+  option_b?: string
+  option_c?: string
+  option_d?: string
   chosen: string | null
   correct_answer: string
   explanation: string
@@ -228,6 +234,12 @@ export function ExamPage() {
         }
         return {
           id: q.id,
+          topic: q.topic,
+          question_text: q.question_text,
+          option_a: q.option_a,
+          option_b: q.option_b,
+          option_c: q.option_c,
+          option_d: q.option_d,
           chosen,
           correct_answer: correct,
           explanation: q.explanation || 'No rationale available for this question.',
@@ -476,12 +488,22 @@ export function ExamPage() {
       const tutorModeActive = searchParams.get('mode') === 'tutor'
       setIsTutorMode(tutorModeActive)
 
+      // Resolve specific course filter if present (either query param or history state)
+      const stateObj = (location.state as any) || {}
+      const rawCourseId = searchParams.get('courseId') || stateObj.courseId
+      // Check if it's a valid UUID (database course) vs generic mock label
+      const isUuid = rawCourseId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawCourseId)
+      const targetCourseId = isUuid ? rawCourseId : null
+
       let returnedQuestions: ExamQuestion[] = []
       let returnedAttemptId: string | null = null
 
       if (tutorModeActive) {
         // Tutor practice mode: fetch questions with answers & rationales
-        const { data, error } = await supabase.rpc('get_practice_questions', { p_count: validCount })
+        const { data, error } = await supabase.rpc('get_practice_questions', {
+          p_count: validCount,
+          ...(targetCourseId ? { p_course_id: targetCourseId } : {}),
+        })
         if (error || !data) {
           if (error?.message?.includes('TRIAL_EXHAUSTED')) {
             toast.error('Free trial completed. Activate Pro to unlock unlimited practice!')
@@ -501,7 +523,10 @@ export function ExamPage() {
         returnedAttemptId = `tutor-${Date.now()}`
       } else {
         // Strict timed CBT mode: server withholds answers until submit
-        const { data, error } = await supabase.rpc('get_exam_questions', { p_count: validCount })
+        const { data, error } = await supabase.rpc('get_exam_questions', {
+          p_count: validCount,
+          ...(targetCourseId ? { p_course_id: targetCourseId } : {}),
+        })
         if (error || !data) {
           if (error?.message?.includes('TRIAL_EXHAUSTED')) {
             toast.error('Free trial exam completed. Activate Pro to unlock unlimited exam practice!')
@@ -897,25 +922,54 @@ export function ExamPage() {
                 const questionObj = questions.find((q) => q.id === item.id)
                 const isCorrect = item.chosen && item.chosen.toUpperCase() === item.correct_answer.toUpperCase()
 
+                // Resolve question text and options either from local questions list or item payload
+                const questionText = item.question_text || questionObj?.question_text || `Question ID: ${item.id}`
+                const optA = item.option_a ?? questionObj?.option_a ?? ''
+                const optB = item.option_b ?? questionObj?.option_b ?? ''
+                const optC = item.option_c ?? questionObj?.option_c ?? ''
+                const optD = item.option_d ?? questionObj?.option_d ?? ''
+
+                const rawSolutionOptions: Array<{ key: 'A' | 'B' | 'C' | 'D'; text: string }> = [
+                  { key: 'A', text: optA },
+                  { key: 'B', text: optB },
+                  { key: 'C', text: optC },
+                  { key: 'D', text: optD },
+                ]
+
+                const solutionOptions = rawSolutionOptions.filter(
+                  (opt): opt is { key: 'A' | 'B' | 'C' | 'D'; text: string } =>
+                    Boolean(opt.text && typeof opt.text === 'string' && opt.text.trim().length > 0)
+                )
+
+                const chosenOption = solutionOptions.find((opt) => opt.key === (item.chosen || '').toUpperCase())
+                const correctOption = solutionOptions.find((opt) => opt.key === item.correct_answer.toUpperCase())
+
                 return (
                   <div
                     key={item.id}
-                    className="border border-border bg-surface p-5 sm:p-6 rounded-2xl space-y-4"
+                    className="border border-border bg-surface p-5 sm:p-6 rounded-2xl space-y-5"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-muted">
-                        Question {idx + 1}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                          Question {idx + 1}
+                        </span>
+                        {(item.topic || questionObj?.topic) && (
+                          <span className="text-[10px] font-extrabold uppercase tracking-widest text-accent bg-accent/10 px-2 py-0.5 rounded-md">
+                            {item.topic || questionObj?.topic}
+                          </span>
+                        )}
+                      </div>
                       {isCorrect ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-border bg-bg text-text">
-                          <svg className="w-3.5 h-3.5 text-text" viewBox="0 0 20 20" fill="currentColor">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
-                          Correct
+                          Correct (+1)
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-border bg-surface text-muted">
-                          <svg className="w-3.5 h-3.5 text-muted" viewBox="0 0 20 20" fill="currentColor">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-rose-500/30 bg-rose-500/10 text-rose-400">
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                           </svg>
                           Incorrect
@@ -923,12 +977,70 @@ export function ExamPage() {
                       )}
                     </div>
 
-                    <p className="font-semibold text-base sm:text-lg">
-                      {questionObj ? questionObj.question_text : `Question ID: ${item.id}`}
+                    <p className="font-bold text-base sm:text-lg leading-relaxed text-text">
+                      {questionText}
                     </p>
 
-                    {/* Answers block with high-contrast color differentiation */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    {/* All options list with clear marking for choice vs correct */}
+                    <div className="space-y-2.5 pt-1">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-muted block">
+                        Answer Choices &amp; Review
+                      </span>
+                      <div className="flex flex-col space-y-2">
+                        {solutionOptions.map((opt) => {
+                          const isThisCorrect = opt.key === item.correct_answer.toUpperCase()
+                          const isThisChosen = Boolean(item.chosen && opt.key === item.chosen.toUpperCase())
+
+                          let cardClasses = 'border-border bg-bg/60 text-muted opacity-75'
+                          let badgeClasses = 'bg-surface text-muted border border-border'
+
+                          if (isThisCorrect) {
+                            cardClasses = 'border-emerald-500 bg-emerald-500/10 text-text ring-1 ring-emerald-500/50 shadow-xs'
+                            badgeClasses = 'bg-emerald-500 text-white font-black'
+                          } else if (isThisChosen && !isThisCorrect) {
+                            cardClasses = 'border-rose-500 bg-rose-500/10 text-rose-200 ring-1 ring-rose-500/50 shadow-xs'
+                            badgeClasses = 'bg-rose-500 text-white font-black'
+                          }
+
+                          return (
+                            <div
+                              key={opt.key}
+                              className={`p-3.5 sm:p-4 rounded-xl border flex items-center justify-between gap-3 text-sm transition-all ${cardClasses}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 ${badgeClasses}`}>
+                                  {opt.key}
+                                </span>
+                                <span className="font-medium leading-relaxed">{opt.text}</span>
+                              </div>
+
+                              <div className="shrink-0 flex items-center gap-1.5 text-xs font-bold">
+                                {isThisCorrect && (
+                                  <span className="text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                                    <span>✓</span>
+                                    <span>Correct Answer</span>
+                                  </span>
+                                )}
+                                {isThisChosen && !isThisCorrect && (
+                                  <span className="text-rose-400 bg-rose-500/20 px-2.5 py-0.5 rounded-full border border-rose-500/30 flex items-center gap-1">
+                                    <span>✗</span>
+                                    <span>Your Choice</span>
+                                  </span>
+                                )}
+                                {isThisChosen && isThisCorrect && (
+                                  <span className="text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                                    <span>Your Selection</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Summary comparison pills: Your Choice vs Correct Answer */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm pt-1">
                       <div
                         className={`p-3.5 rounded-xl border ${
                           isCorrect
@@ -937,32 +1049,40 @@ export function ExamPage() {
                         }`}
                       >
                         <span className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-80">
-                          Your Choice
+                          Your Selected Answer
                         </span>
-                        <div className="flex items-center gap-2 font-bold text-base">
+                        <div className="flex items-start gap-2 font-bold text-sm">
                           {isCorrect ? (
-                            <span className="text-emerald-400">✓</span>
+                            <span className="text-emerald-400 shrink-0">✓</span>
                           ) : (
-                            <span className="text-rose-400">✗</span>
+                            <span className="text-rose-400 shrink-0">✗</span>
                           )}
                           <span>
-                            {item.chosen ? `Option ${item.chosen.toUpperCase()}` : '(No answer selected)'}
+                            {chosenOption
+                              ? `Option ${chosenOption.key}: ${chosenOption.text}`
+                              : item.chosen
+                              ? `Option ${item.chosen.toUpperCase()}`
+                              : '(No answer selected)'}
                           </span>
                         </div>
                       </div>
 
                       <div className="p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
                         <span className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-80">
-                          Correct Answer
+                          Correct Verified Answer
                         </span>
-                        <div className="flex items-center gap-2 font-bold text-base text-emerald-400">
-                          <span>✓</span>
-                          <span>Option {item.correct_answer.toUpperCase()}</span>
+                        <div className="flex items-start gap-2 font-bold text-sm text-emerald-400">
+                          <span className="shrink-0">✓</span>
+                          <span>
+                            {correctOption
+                              ? `Option ${correctOption.key}: ${correctOption.text}`
+                              : `Option ${item.correct_answer.toUpperCase()}`}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Explanation */}
+                    {/* Clinical Rationale & Explanation */}
                     {item.explanation && (
                       <div className="p-4 rounded-xl border border-border/80 bg-bg/50 space-y-1">
                         <span className="text-xs font-bold text-muted uppercase tracking-wider block">
@@ -990,12 +1110,15 @@ export function ExamPage() {
     return null
   }
 
-  const options: Array<{ key: 'A' | 'B' | 'C' | 'D'; text: string }> = [
+  const rawOptions: Array<{ key: 'A' | 'B' | 'C' | 'D'; text: string }> = [
     { key: 'A', text: currentQuestion.option_a },
     { key: 'B', text: currentQuestion.option_b },
     { key: 'C', text: currentQuestion.option_c },
     { key: 'D', text: currentQuestion.option_d },
   ]
+
+  // Filter out any missing or empty options so no blank choice buttons ever appear
+  const options = rawOptions.filter((opt) => opt.text && typeof opt.text === 'string' && opt.text.trim().length > 0)
 
   const selectedAnswer = answers[currentQuestion.id]
 
