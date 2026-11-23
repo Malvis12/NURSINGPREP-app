@@ -238,7 +238,7 @@ export function AdminQuestionsPage() {
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(300)
+        .limit(2000)
 
       if (!error && data) {
         setQuestions((data as unknown as QuestionRow[]) || [])
@@ -251,7 +251,7 @@ export function AdminQuestionsPage() {
         .from('questions')
         .select('id, course_id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, topic, status, created_at')
         .order('created_at', { ascending: false })
-        .limit(300)
+        .limit(2000)
 
       if (flatError) throw flatError
 
