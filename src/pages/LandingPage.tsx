@@ -1,14 +1,16 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ThemeToggle } from '../components/ThemeToggle'
 
 export function LandingPage() {
   const navigate = useNavigate()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-bg text-text selection:bg-accent/20">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
             <img
               src="/logo.jpg"
@@ -17,7 +19,9 @@ export function LandingPage() {
             />
             <span className="font-extrabold text-lg tracking-tight">NursingPrep</span>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Desktop Right Nav (sm and above) */}
+          <div className="hidden sm:flex items-center gap-3">
             <ThemeToggle />
             <button
               type="button"
@@ -34,7 +38,55 @@ export function LandingPage() {
               Create account
             </button>
           </div>
+
+          {/* Mobile Right Controls: Theme Toggle + Hamburger Toggle */}
+          <div className="flex sm:hidden items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+              className="p-2 rounded-lg border border-border bg-surface text-text hover:border-accent transition flex items-center justify-center"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Dropdown Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-border bg-surface/98 px-4 py-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false)
+                navigate('/signup')
+              }}
+              className="w-full bg-primary text-on-primary py-2.5 text-sm font-bold rounded-xl transition text-center shadow-xs"
+            >
+              Create Account (1 Free Drill)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false)
+                navigate('/login')
+              }}
+              className="w-full border border-border bg-bg text-text py-2.5 text-sm font-semibold rounded-xl transition text-center hover:border-accent"
+            >
+              Sign in to Portal
+            </button>
+          </div>
+        )}
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-14 space-y-20">
