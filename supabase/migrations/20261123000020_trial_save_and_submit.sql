@@ -1,6 +1,6 @@
 -- Migration: 20261123000020_trial_save_and_submit.sql
 -- Allows free trial users (users who have an unsubmitted attempt granted by get_exam_questions)
--- to call save_answers and submit_exam without being blocked by "Active membership required".
+-- to call save_answers, submit_exam, get_attempt_result, and resume_exam without being blocked by "Active membership required".
 -- Active membership or being within the legitimate 1 free trial attempt is verified by checking attempt ownership.
 
 -- 1. Update save_answers
@@ -188,3 +188,184 @@ $$;
 
 revoke all on function public.submit_exam(uuid, jsonb) from public, anon;
 grant execute on function public.submit_exam(uuid, jsonb) to authenticated;
+
+-- 3. Update get_attempt_result (allow owner of the attempt to view their results)
+create or replace function public.get_attempt_result(p_attempt_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_attempt_user_id uuid;
+  v_question_ids uuid[];
+  v_submitted_at timestamptz;
+  v_score int;
+  v_total int;
+  v_late boolean;
+  v_auto_submitted boolean;
+  v_answers jsonb;
+  v_results jsonb := '[]'::jsonb;
+  v_qid uuid;
+  v_q record;
+  v_chosen text;
+begin
+  if auth.uid() is null then
+    raise exception 'Unauthorized';
+  end if;
+
+  select user_id, question_ids, answers, submitted_at, score, total, late, auto_submitted
+  into v_attempt_user_id, v_question_ids, v_answers, v_submitted_at, v_score, v_total, v_late, v_auto_submitted
+  from public.exam_attempts
+  where id = p_attempt_id;
+
+  if not found then
+    raise exception 'Exam attempt not found';
+  end if;
+
+  if v_attempt_user_id <> auth.uid() then
+    raise exception 'Attempt does not belong to user';
+  end if;
+
+  if v_submitted_at is null then
+    raise exception 'Exam attempt not yet submitted';
+  end if;
+
+  v_answers := coalesce(v_answers, '{}'::jsonb);
+  v_total := coalesce(array_length(v_question_ids, 1), 0);
+
+  if v_total > 0 then
+    for i in 1 .. v_total loop
+      v_qid := v_question_ids[i];
+      select id, correct_answer, explanation
+      into v_q
+      from public.questions
+      where id = v_qid;
+
+      if found then
+        v_chosen := v_answers ->> v_qid::text;
+        v_results := v_results || jsonb_build_array(
+          jsonb_build_object(
+            'id', v_q.id,
+            'chosen', v_chosen,
+            'correct_answer', v_q.correct_answer,
+            'explanation', v_q.explanation
+          )
+        );
+      end if;
+    end loop;
+  end if;
+
+  return jsonb_build_object(
+    'score', coalesce(v_score, 0),
+    'total', v_total,
+    'late', coalesce(v_late, false),
+    'auto_submitted', coalesce(v_auto_submitted, false),
+    'results', v_results
+  );
+end;
+$$;
+
+revoke all on function public.get_attempt_result(uuid) from public, anon;
+grant execute on function public.get_attempt_result(uuid) to authenticated;
+
+-- 4. Update resume_exam (allow trial owner to resume or see submitted status of their own attempt)
+create or replace function public.resume_exam(p_attempt_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_attempt_user_id uuid;
+  v_question_ids uuid[];
+  v_submitted_at timestamptz;
+  v_created_at timestamptz;
+  v_answers jsonb;
+  v_total int;
+  v_questions jsonb := '[]'::jsonb;
+  v_qid uuid;
+  v_q record;
+  v_elapsed int;
+  v_seconds_remaining int;
+begin
+  if auth.uid() is null then
+    raise exception 'Unauthorized';
+  end if;
+
+  select user_id, question_ids, submitted_at, created_at, answers
+  into v_attempt_user_id, v_question_ids, v_submitted_at, v_created_at, v_answers
+  from public.exam_attempts
+  where id = p_attempt_id;
+
+  if not found then
+    raise exception 'Exam attempt not found';
+  end if;
+
+  if v_attempt_user_id <> auth.uid() then
+    raise exception 'Attempt does not belong to user';
+  end if;
+
+  -- If already submitted, return submitted status with nothing sensitive
+  if v_submitted_at is not null then
+    return jsonb_build_object(
+      'attempt_id', p_attempt_id,
+      'status', 'submitted'
+    );
+  end if;
+
+  -- If expired (now() > created_at + 7200s + 30s), finalize and return submitted status
+  if now() > v_created_at + interval '7200 seconds' + interval '30 seconds' then
+    update public.exam_attempts
+    set auto_submitted = true
+    where id = p_attempt_id and submitted_at is null;
+
+    perform public.grade_attempt(p_attempt_id);
+
+    return jsonb_build_object(
+      'attempt_id', p_attempt_id,
+      'status', 'submitted'
+    );
+  end if;
+
+  -- In-progress active exam: return questions, remaining time, and saved answers
+  v_elapsed := floor(extract(epoch from (now() - v_created_at)))::int;
+  v_total := coalesce(array_length(v_question_ids, 1), 20);
+  v_seconds_remaining := greatest((v_total * 60) - v_elapsed, 0);
+
+  if v_total > 0 then
+    for i in 1 .. v_total loop
+      v_qid := v_question_ids[i];
+      select id, topic, question_text, option_a, option_b, option_c, option_d
+      into v_q
+      from public.questions
+      where id = v_qid;
+
+      if found then
+        v_questions := v_questions || jsonb_build_array(
+          jsonb_build_object(
+            'id', v_q.id,
+            'topic', v_q.topic,
+            'question_text', v_q.question_text,
+            'option_a', v_q.option_a,
+            'option_b', v_q.option_b,
+            'option_c', v_q.option_c,
+            'option_d', v_q.option_d
+          )
+        );
+      end if;
+    end loop;
+  end if;
+
+  return jsonb_build_object(
+    'attempt_id', p_attempt_id,
+    'status', 'in_progress',
+    'seconds_remaining', v_seconds_remaining,
+    'questions', v_questions,
+    'answers', coalesce(v_answers, '{}'::jsonb)
+  );
+end;
+$$;
+
+revoke all on function public.resume_exam(uuid) from public, anon;
+grant execute on function public.resume_exam(uuid) to authenticated;

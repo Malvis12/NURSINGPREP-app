@@ -313,7 +313,7 @@ export function ExamPage() {
     if (phase !== 'in_progress') return
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
+      if (document.visibilityState === 'hidden' && !hasSubmittedRef.current) {
         if (debounceTimerRef.current) {
           clearTimeout(debounceTimerRef.current)
           debounceTimerRef.current = null
@@ -323,11 +323,13 @@ export function ExamPage() {
     }
 
     const handlePageHide = () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-        debounceTimerRef.current = null
+      if (!hasSubmittedRef.current) {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current)
+          debounceTimerRef.current = null
+        }
+        void flushPendingChanges()
       }
-      void flushPendingChanges()
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -376,6 +378,12 @@ export function ExamPage() {
         clearTimeout(timeoutTimer)
 
         if (error || !data) {
+          if (error?.message?.includes('already submitted')) {
+            clearStoredExam()
+            setPhase('start')
+            setIsLoading(false)
+            return
+          }
           fallbackToStart(error?.message || 'Failed to resume exam. Please start a new attempt.')
           return
         }
