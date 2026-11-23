@@ -943,14 +943,16 @@ export function ExamPage() {
           transition={{ duration: 0.1 }}
           className="space-y-6 flex-1 flex flex-col justify-between"
         >
-          <div>
-            <h2 className="text-base sm:text-2xl font-bold leading-relaxed text-text">
+          {/* Clinical Vignette Card */}
+          <div className="border border-border bg-surface p-5 sm:p-7 rounded-2xl shadow-sm border-l-4 border-l-accent space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-accent">Clinical Case Stem</span>
+            <h2 className="text-base sm:text-xl font-bold leading-relaxed text-text">
               {currentQuestion.question_text}
             </h2>
           </div>
 
           {/* Four Option Buttons (A-D) */}
-          <div className="flex flex-col space-y-3 pt-2">
+          <div className="flex flex-col space-y-3 pt-1">
             {options.map((opt) => {
               const isSelected = selectedAnswer === opt.key
 
@@ -961,30 +963,30 @@ export function ExamPage() {
                   whileTap={{ scale: 0.99 }}
                   onClick={() => handleSelectOption(currentQuestion.id, opt.key)}
                   aria-label={`Option ${opt.key}: ${opt.text}`}
-                  className={`w-full text-left p-3.5 sm:p-4 rounded-xl border flex items-center justify-between gap-4 motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`w-full text-left p-4 sm:p-4.5 rounded-2xl border flex items-center justify-between gap-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     isSelected
-                      ? 'border-primary bg-primary/10 ring-1 ring-primary text-text'
-                      : 'border-border bg-surface text-text hover:border-border/80 active:bg-surface/80'
+                      ? 'border-accent bg-accent-light shadow-sm text-text ring-1 ring-accent'
+                      : 'border-border bg-surface hover:border-border-strong active:bg-surface-elevated text-text'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     <span
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition ${
                         isSelected
-                          ? 'bg-primary text-on-primary'
+                          ? 'bg-accent text-white shadow-sm'
                           : 'bg-bg text-muted border border-border'
                       }`}
                     >
                       {opt.key}
                     </span>
-                    <span className="text-sm sm:text-base font-medium leading-snug">{opt.text}</span>
+                    <span className="text-sm sm:text-base font-medium leading-relaxed">{opt.text}</span>
                   </div>
 
-                  {/* Small wine accent indicator on selected option only */}
+                  {/* Indicator on selected option */}
                   {isSelected && (
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-accent bg-accent/15 px-2 py-0.5 rounded-full shrink-0">
-                      Selected
-                    </span>
+                    <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                      <div className="w-2.5 h-2.5 rounded-full bg-accent" />
+                    </div>
                   )}
                 </motion.button>
               )

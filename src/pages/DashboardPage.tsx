@@ -1237,12 +1237,12 @@ export function DashboardPage() {
               </p>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface border border-border self-start sm:self-auto">
+            {/* Filter Pills with Horizontal Swipe on Mobile */}
+            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-surface border border-border overflow-x-auto max-w-full scrollbar-none touch-pan-x shrink-0">
               <button
                 type="button"
                 onClick={() => setCourseFilter('my_level')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg motion-safe:transition-all ${
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                   courseFilter === 'my_level'
                     ? 'bg-primary text-on-primary shadow-xs'
                     : 'text-muted hover:text-text'
@@ -1253,7 +1253,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setCourseFilter('high_yield')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg motion-safe:transition-all ${
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                   courseFilter === 'high_yield'
                     ? 'bg-primary text-on-primary shadow-xs'
                     : 'text-muted hover:text-text'
@@ -1264,7 +1264,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setCourseFilter('all')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg motion-safe:transition-all ${
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all ${
                   courseFilter === 'all'
                     ? 'bg-primary text-on-primary shadow-xs'
                     : 'text-muted hover:text-text'

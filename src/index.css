@@ -1,55 +1,67 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #F8F9FA;
+  --bg: #F8FAFC;
   --surface: #FFFFFF;
+  --surface-elevated: #F1F5F9;
   --text: #0F172A;
   --muted: #64748B;
   --primary: #0F172A;
-  --on-primary: #F8FAFC;
+  --on-primary: #FFFFFF;
   --accent: #0284C7;
+  --accent-light: rgba(2, 132, 199, 0.08);
   --border: #E2E8F0;
+  --border-strong: #CBD5E1;
   --brand-navy: #0B132B;
 }
 
 /* System dark fallback when no class is explicitly set */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --bg: #0B1015;
-    --surface: #121A22;
+    --bg: #090D12;
+    --surface: #0F1720;
+    --surface-elevated: #151F2B;
     --text: #F1F5F9;
     --muted: #94A3B8;
-    --primary: #F8FAFC;
-    --on-primary: #0F172A;
+    --primary: #38BDF8;
+    --on-primary: #090D12;
     --accent: #38BDF8;
-    --border: #1E293B;
-    --brand-navy: #0F172A;
+    --accent-light: rgba(56, 189, 248, 0.1);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --brand-navy: #090D12;
   }
 }
 
 /* Explicit .dark class toggle */
 html.dark {
-  --bg: #0B1015;
-  --surface: #121A22;
+  --bg: #090D12;
+  --surface: #0F1720;
+  --surface-elevated: #151F2B;
   --text: #F1F5F9;
   --muted: #94A3B8;
-  --primary: #F8FAFC;
-  --on-primary: #0F172A;
+  --primary: #38BDF8;
+  --on-primary: #090D12;
   --accent: #38BDF8;
-  --border: #1E293B;
-  --brand-navy: #0F172A;
+  --accent-light: rgba(56, 189, 248, 0.1);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --brand-navy: #090D12;
 }
 
 /* Explicit .light class toggle */
 html.light {
-  --bg: #F8F9FA;
+  --bg: #F8FAFC;
   --surface: #FFFFFF;
+  --surface-elevated: #F1F5F9;
   --text: #0F172A;
   --muted: #64748B;
   --primary: #0F172A;
-  --on-primary: #F8FAFC;
+  --on-primary: #FFFFFF;
   --accent: #0284C7;
+  --accent-light: rgba(2, 132, 199, 0.08);
   --border: #E2E8F0;
+  --border-strong: #CBD5E1;
   --brand-navy: #0B132B;
 }
 
@@ -60,12 +72,15 @@ html.light {
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
   --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-success: #10B981;
   --color-danger: #EF4444;
   --color-warning: #F59E0B;
