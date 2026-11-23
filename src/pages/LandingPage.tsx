@@ -53,7 +53,7 @@ export function LandingPage() {
               onClick={() => navigate('/signup')}
               className="w-full sm:w-auto bg-primary text-on-primary px-7 py-3 text-sm font-semibold rounded-xl transition hover:opacity-95 active:scale-[0.98]"
             >
-              Create student account
+              Start 1 Free Practice Exam
             </button>
             <button
               type="button"
@@ -64,7 +64,7 @@ export function LandingPage() {
             </button>
           </div>
           <p className="text-xs text-muted max-w-md mx-auto">
-            Designed for institutional study, departmental continuous assessment, and licensure revision.
+            Includes 1 full complimentary CBT simulation drill on any course of your choice upon registration.
           </p>
         </section>
 
