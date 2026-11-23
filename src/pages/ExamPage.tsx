@@ -13,6 +13,8 @@ export interface ExamQuestion {
   option_b: string
   option_c: string
   option_d: string
+  correct_answer?: string
+  explanation?: string
 }
 
 export interface ExamResultItem {
@@ -97,6 +99,13 @@ export function ExamPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME_SECONDS)
   const [resultsData, setResultsData] = useState<ExamSubmissionResponse | null>(null)
+
+  // Mode state: 'timed' (strict exam) or 'tutor' (interactive practice)
+  const [isTutorMode, setIsTutorMode] = useState<boolean>(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    return searchParams.get('mode') === 'tutor'
+  })
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   // Auto-save refs
   const pendingChangesRef = useRef<Record<string, string>>({})
@@ -202,9 +211,37 @@ export function ExamPage() {
       retryTimerRef.current = null
     }
 
-    // Flush pending changes right before submit
-    if (isDirtyRef.current) {
+    // Flush pending changes right before submit (only in timed exam mode)
+    if (isDirtyRef.current && !isTutorMode) {
       await flushPendingChanges(effectiveAttemptId)
+    }
+
+    if (isTutorMode) {
+      // Calculate results client-side for tutor mode
+      let correctScore = 0
+      const results: ExamResultItem[] = questions.map((q) => {
+        const chosen = currentAnswers[q.id] || null
+        const correct = (q.correct_answer || '').toUpperCase()
+        if (chosen && chosen.toUpperCase() === correct) {
+          correctScore++
+        }
+        return {
+          id: q.id,
+          chosen,
+          correct_answer: correct,
+          explanation: q.explanation || 'No rationale available for this question.',
+        }
+      })
+
+      clearStoredExam()
+      setResultsData({
+        score: correctScore,
+        total: questions.length,
+        results,
+      })
+      setPhase('results')
+      setIsSubmitting(false)
+      return
     }
 
     try {
@@ -253,7 +290,7 @@ export function ExamPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [attemptId, flushPendingChanges])
+  }, [attemptId, flushPendingChanges, isTutorMode, questions])
 
   const submitExamRef = useRef(submitExam)
   useEffect(() => {
@@ -418,26 +455,53 @@ export function ExamPage() {
       const searchParams = new URLSearchParams(window.location.search)
       const requestedCount = parseInt(searchParams.get('count') || '20', 10)
       const validCount = !isNaN(requestedCount) && requestedCount > 0 ? requestedCount : 20
+      const tutorModeActive = searchParams.get('mode') === 'tutor'
+      setIsTutorMode(tutorModeActive)
 
-      const { data, error } = await supabase.rpc('get_exam_questions', { p_count: validCount })
-      if (error || !data) {
-        if (error?.message?.includes('TRIAL_EXHAUSTED')) {
-          toast.error('Free trial exam completed. Activate Pro to unlock unlimited exam practice!')
-          navigate('/pay')
-          return
-        }
-        if (error?.message?.includes('NO_QUESTIONS_FOR_LEVEL')) {
-          setNoQuestionsAvailable(true)
+      let returnedQuestions: ExamQuestion[] = []
+      let returnedAttemptId: string | null = null
+
+      if (tutorModeActive) {
+        // Tutor practice mode: fetch questions with answers & rationales
+        const { data, error } = await supabase.rpc('get_practice_questions', { p_count: validCount })
+        if (error || !data) {
+          if (error?.message?.includes('TRIAL_EXHAUSTED')) {
+            toast.error('Free trial completed. Activate Pro to unlock unlimited practice!')
+            navigate('/pay')
+            return
+          }
+          if (error?.message?.includes('NO_QUESTIONS_FOR_LEVEL')) {
+            setNoQuestionsAvailable(true)
+            setIsLoading(false)
+            return
+          }
+          toast.error(error?.message || 'Failed to load practice questions. Please try again.')
           setIsLoading(false)
           return
         }
-        toast.error(error?.message || 'Failed to load exam questions. Please try again.')
-        setIsLoading(false)
-        return
+        returnedQuestions = data.questions || []
+        returnedAttemptId = `tutor-${Date.now()}`
+      } else {
+        // Strict timed CBT mode: server withholds answers until submit
+        const { data, error } = await supabase.rpc('get_exam_questions', { p_count: validCount })
+        if (error || !data) {
+          if (error?.message?.includes('TRIAL_EXHAUSTED')) {
+            toast.error('Free trial exam completed. Activate Pro to unlock unlimited exam practice!')
+            navigate('/pay')
+            return
+          }
+          if (error?.message?.includes('NO_QUESTIONS_FOR_LEVEL')) {
+            setNoQuestionsAvailable(true)
+            setIsLoading(false)
+            return
+          }
+          toast.error(error?.message || 'Failed to load exam questions. Please try again.')
+          setIsLoading(false)
+          return
+        }
+        returnedQuestions = data.questions || []
+        returnedAttemptId = data.attempt_id
       }
-
-      const returnedQuestions: ExamQuestion[] = data.questions || []
-      const returnedAttemptId: string = data.attempt_id
 
       if (!returnedAttemptId || returnedQuestions.length === 0) {
         toast.error('No exam questions available at this time.')
@@ -459,6 +523,7 @@ export function ExamPage() {
       setCurrentIndex(0)
       setAnswers({})
       setTimeLeft(examSeconds)
+      setElapsedSeconds(0)
       hasSubmittedRef.current = false
       setPhase('in_progress')
     } catch (err: unknown) {
@@ -469,9 +534,19 @@ export function ExamPage() {
     }
   }
 
-  // Timer countdown and auto-submit
+  // Timer countdown and auto-submit (strict mode) or elapsed stopwatch (tutor mode)
   useEffect(() => {
-    if (phase !== 'in_progress' || !deadline) return
+    if (phase !== 'in_progress') return
+
+    if (isTutorMode) {
+      // Tutor mode: relaxed count-up stopwatch
+      const stopwatch = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1)
+      }, 1000)
+      return () => clearInterval(stopwatch)
+    }
+
+    if (!deadline) return
 
     const updateTimer = () => {
       const remainingMs = Math.max(0, deadline - Date.now())
@@ -498,7 +573,7 @@ export function ExamPage() {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [phase, deadline])
+  }, [phase, deadline, isTutorMode])
 
   const handleSelectOption = useCallback((questionId: string, optionKey: string) => {
     setAnswers((prev) => {
@@ -507,18 +582,20 @@ export function ExamPage() {
       return updated
     })
 
-    // Track pending changes and dirty state
-    pendingChangesRef.current[questionId] = optionKey
-    isDirtyRef.current = true
+    if (!isTutorMode) {
+      // Track pending changes and dirty state in strict timed exam mode
+      pendingChangesRef.current[questionId] = optionKey
+      isDirtyRef.current = true
 
-    // Debounce save (1s)
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
+      // Debounce save (1s)
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        void flushPendingChangesRef.current?.()
+      }, 1000)
     }
-    debounceTimerRef.current = setTimeout(() => {
-      void flushPendingChangesRef.current?.()
-    }, 1000)
-  }, [])
+  }, [isTutorMode])
 
   // Keyboard navigation
   useEffect(() => {
@@ -879,7 +956,14 @@ export function ExamPage() {
       <header className="border-b border-border bg-surface sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-sm sm:text-base tracking-tight">NursingPrep CBT</span>
+            <span className="font-extrabold text-sm sm:text-base tracking-tight">
+              {isTutorMode ? 'Tutor Mode Practice' : 'NursingPrep CBT'}
+            </span>
+            {isTutorMode && (
+              <span className="text-[10px] font-black tracking-widest uppercase bg-accent/15 text-accent px-2 py-0.5 rounded-full border border-accent/20">
+                Untimed Practice
+              </span>
+            )}
             {saveStatus && (
               <span className="text-xs text-muted font-medium ml-2" role="status" aria-live="polite">
                 {saveStatus}
@@ -888,17 +972,21 @@ export function ExamPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Timer (mm:ss) */}
+            {/* Timer or Stopwatch */}
             <div
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm font-mono font-bold ${
-                timeLeft <= 60 ? 'text-accent border-accent animate-pulse' : 'text-text bg-bg'
+                isTutorMode
+                  ? 'text-accent bg-accent/5 border-accent/20'
+                  : timeLeft <= 60
+                  ? 'text-accent border-accent animate-pulse'
+                  : 'text-text bg-bg'
               }`}
-              aria-label="Time remaining"
+              aria-label={isTutorMode ? 'Elapsed study time' : 'Time remaining'}
             >
               <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>{formatTimer(timeLeft)}</span>
+              <span>{isTutorMode ? formatTimer(elapsedSeconds) : formatTimer(timeLeft)}</span>
             </div>
 
             {/* Submit button in header */}
@@ -955,6 +1043,28 @@ export function ExamPage() {
           <div className="flex flex-col space-y-3 pt-1">
             {options.map((opt) => {
               const isSelected = selectedAnswer === opt.key
+              const isTutorRevealed = isTutorMode && Boolean(selectedAnswer)
+              const isCorrectAnswer = isTutorRevealed && opt.key === (currentQuestion.correct_answer || '').toUpperCase()
+              const isIncorrectSelection = isTutorRevealed && isSelected && !isCorrectAnswer
+
+              let buttonClasses = 'border-border bg-surface hover:border-border-strong active:bg-surface-elevated text-text'
+              let badgeClasses = 'bg-bg text-muted border border-border'
+
+              if (isTutorRevealed) {
+                if (isCorrectAnswer) {
+                  buttonClasses = 'border-emerald-500 bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500'
+                  badgeClasses = 'bg-emerald-500 text-white shadow-sm'
+                } else if (isIncorrectSelection) {
+                  buttonClasses = 'border-rose-500 bg-rose-500/10 text-rose-300 ring-1 ring-rose-500'
+                  badgeClasses = 'bg-rose-500 text-white shadow-sm'
+                } else {
+                  buttonClasses = 'border-border/60 bg-surface/50 text-muted/60 opacity-60'
+                  badgeClasses = 'bg-bg text-muted/40 border border-border/40'
+                }
+              } else if (isSelected) {
+                buttonClasses = 'border-accent bg-accent-light shadow-sm text-text ring-1 ring-accent'
+                badgeClasses = 'bg-accent text-white shadow-sm'
+              }
 
               return (
                 <motion.button
@@ -963,27 +1073,33 @@ export function ExamPage() {
                   whileTap={{ scale: 0.99 }}
                   onClick={() => handleSelectOption(currentQuestion.id, opt.key)}
                   aria-label={`Option ${opt.key}: ${opt.text}`}
-                  className={`w-full text-left p-4 sm:p-4.5 rounded-2xl border flex items-center justify-between gap-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    isSelected
-                      ? 'border-accent bg-accent-light shadow-sm text-text ring-1 ring-accent'
-                      : 'border-border bg-surface hover:border-border-strong active:bg-surface-elevated text-text'
-                  }`}
+                  className={`w-full text-left p-4 sm:p-4.5 rounded-2xl border flex items-center justify-between gap-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${buttonClasses}`}
                 >
                   <div className="flex items-center gap-3.5">
                     <span
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition ${
-                        isSelected
-                          ? 'bg-accent text-white shadow-sm'
-                          : 'bg-bg text-muted border border-border'
-                      }`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition ${badgeClasses}`}
                     >
                       {opt.key}
                     </span>
                     <span className="text-sm sm:text-base font-medium leading-relaxed">{opt.text}</span>
                   </div>
 
-                  {/* Indicator on selected option */}
-                  {isSelected && (
+                  {/* Indicator icon */}
+                  {isTutorRevealed && isCorrectAnswer && (
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                  {isTutorRevealed && isIncorrectSelection && (
+                    <div className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                  )}
+                  {!isTutorRevealed && isSelected && (
                     <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
                       <div className="w-2.5 h-2.5 rounded-full bg-accent" />
                     </div>
@@ -992,6 +1108,30 @@ export function ExamPage() {
               )
             })}
           </div>
+
+          {/* Instant Clinical Rationale in Tutor Mode */}
+          {isTutorMode && selectedAnswer && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-5 rounded-2xl border border-border bg-surface space-y-3 mt-3"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border/80 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-accent">
+                    Instant Clinical Rationale
+                  </span>
+                </div>
+                <span className="text-xs font-extrabold text-muted">
+                  Correct Answer: <span className="text-emerald-400 font-mono">Option {currentQuestion.correct_answer?.toUpperCase()}</span>
+                </span>
+              </div>
+              <p className="text-sm sm:text-base text-text/90 leading-relaxed">
+                {currentQuestion.explanation || 'No rationale available for this question stem.'}
+              </p>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Question Selector Palette (Horizontal scrollable with smooth touch) */}
