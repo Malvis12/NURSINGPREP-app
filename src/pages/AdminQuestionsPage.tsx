@@ -56,8 +56,10 @@ export function AdminQuestionsPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isBulkOpen, setIsBulkOpen] = useState(false)
   const [isCreateCourseOpen, setIsCreateCourseOpen] = useState(false)
+  const [isManageCoursesOpen, setIsManageCoursesOpen] = useState(false)
   const [editingQuestion, setEditingQuestion] = useState<QuestionRow | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeletingCourse, setIsDeletingCourse] = useState(false)
 
   // New Course Form State
   const [courseFormData, setCourseFormData] = useState({
@@ -481,6 +483,49 @@ export function AdminQuestionsPage() {
     }
   }
 
+  // Delete Course and all attached questions
+  const handleDeleteCourse = async (courseId: string, courseCode: string, courseTitle: string) => {
+    const confirmationPrompt = window.prompt(
+      `⚠️ PERMANENT ACTION:\n\nDeleting "${courseCode} — ${courseTitle}" will PERMANENTLY REMOVE this course and ALL questions attached to it from the database!\n\nTo confirm, type the course code "${courseCode}" below:`
+    )
+
+    if (!confirmationPrompt || confirmationPrompt.trim().toUpperCase() !== courseCode.trim().toUpperCase()) {
+      if (confirmationPrompt !== null) {
+        toast.error('Course code mismatch. Deletion cancelled.')
+      }
+      return
+    }
+
+    setIsDeletingCourse(true)
+    try {
+      // 1. Try our dedicated admin_delete_course RPC function
+      const { error } = await supabase.rpc('admin_delete_course', { p_course_id: courseId })
+
+      if (error) {
+        // Fallback: direct table cascade if RPC not yet run in SQL editor
+        console.warn('RPC admin_delete_course failed, attempting direct table cascade:', error.message)
+        const delQ = await supabase.from('questions').delete().eq('course_id', courseId)
+        if (delQ.error) throw delQ.error
+
+        const delSources = await supabase.from('question_sources').delete().eq('course_id', courseId)
+        if (delSources.error) console.warn('Could not delete question sources:', delSources.error.message)
+
+        const delC = await supabase.from('courses').delete().eq('id', courseId)
+        if (delC.error) throw delC.error
+      }
+
+      toast.success(`Course "${courseCode}" and all its questions were successfully deleted!`)
+      await loadCoursesAndLevels()
+      await loadQuestions()
+      setSelectedCourseFilter('all')
+    } catch (err: any) {
+      console.error('Failed to delete course:', err)
+      toast.error(err.message || 'Failed to delete course and its questions.')
+    } finally {
+      setIsDeletingCourse(false)
+    }
+  }
+
   // Quick Approve Status
   const handleQuickApprove = async (id: string) => {
     try {
@@ -722,6 +767,13 @@ export function AdminQuestionsPage() {
 
         {/* Action Triggers */}
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsManageCoursesOpen(true)}
+            className="border border-border hover:border-accent bg-surface text-text px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl motion-safe:transition-transform motion-safe:active:scale-95 inline-flex items-center gap-1.5"
+          >
+            <span>📚 Manage Courses</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsCreateCourseOpen(true)}
@@ -1407,6 +1459,106 @@ export function AdminQuestionsPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ==================================================================== */}
+      {/* MANAGE COURSES MODAL (VIEW & DELETE COURSES WITH QUESTIONS) */}
+      {/* ==================================================================== */}
+      <AnimatePresence>
+        {isManageCoursesOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsManageCoursesOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-2xl bg-surface border border-border rounded-3xl p-6 sm:p-8 shadow-2xl z-10 space-y-5 max-h-[85vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between border-b border-border pb-4">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-accent">
+                    Curriculum Directory
+                  </span>
+                  <h2 className="text-xl font-bold tracking-tight text-text">
+                    Manage Active Courses
+                  </h2>
+                  <p className="text-xs text-muted mt-0.5">
+                    View active courses or delete a course along with all associated questions.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsManageCoursesOpen(false)}
+                  className="p-2 rounded-xl border border-border hover:border-accent bg-bg text-text"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                {courses.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted">
+                    No active courses found.
+                  </div>
+                ) : (
+                  courses.map((course) => {
+                    const questionCount = questions.filter((q) => q.course_id === course.id).length
+                    return (
+                      <div
+                        key={course.id}
+                        className="p-4 rounded-2xl border border-border bg-bg flex items-center justify-between gap-4"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 rounded-md">
+                              {course.code}
+                            </span>
+                            <span className="text-xs font-bold text-muted">
+                              Level {course.level_code}
+                            </span>
+                            <span className="text-xs text-muted/60">·</span>
+                            <span className="text-xs font-bold text-muted">
+                              {questionCount} questions
+                            </span>
+                          </div>
+                          <div className="font-bold text-sm text-text">
+                            {course.title}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={isDeletingCourse}
+                          onClick={() => handleDeleteCourse(course.id, course.code, course.title)}
+                          className="px-3.5 py-1.5 text-xs font-extrabold rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 active:scale-95 transition-all shrink-0 disabled:opacity-50 inline-flex items-center gap-1.5"
+                        >
+                          <span>🗑️ Delete Course</span>
+                        </button>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-border flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsManageCoursesOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-border bg-bg font-bold text-xs sm:text-sm text-text hover:border-accent"
+                >
+                  Close
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
