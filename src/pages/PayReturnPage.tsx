@@ -69,6 +69,23 @@ export function PayReturnPage() {
       }
     }, 2500)
 
+    // Real-time verification fallback: ask edge function to verify reference directly with Paystack
+    const triggerDirectVerify = async () => {
+      const searchParams = new URLSearchParams(window.location.search)
+      const ref = searchParams.get('reference') || searchParams.get('trxref')
+      if (!ref) return
+
+      try {
+        await supabase.functions.invoke('payment-verify', {
+          body: { reference: ref },
+        })
+      } catch {
+        // Fallback silently to polling
+      }
+    }
+
+    void triggerDirectVerify()
+
     const checkStatus = async () => {
       if (hasNavigatedRef.current || !isMountedRef.current) return
 
