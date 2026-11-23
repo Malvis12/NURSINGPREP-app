@@ -933,7 +933,7 @@ export function DashboardPage() {
       {/* ==================================================================== */}
       {/* TOP CLINICAL HEADER BAR */}
       {/* ==================================================================== */}
-      <header className="border-b border-border bg-surface/95 backdrop-blur-md sticky top-0 z-30">
+      <header className="border-b border-border bg-surface/95 backdrop-blur-md sticky top-0 z-30 pt-safe">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
@@ -1535,23 +1535,17 @@ export function DashboardPage() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium">
               <a
-                href="mailto:support@nursingprep.com?subject=Request%20More%20Courses"
+                href="mailto:codemaverick20@gmail.com?subject=Request%20More%20Courses"
                 className="hover:text-accent transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface"
               >
                 <span>📚 Request More Courses</span>
               </a>
               <a
-                href="mailto:support@nursingprep.com?subject=Student%20Support%20Inquiry"
+                href="mailto:codemaverick20@gmail.com?subject=Need%20Support"
                 className="hover:text-accent transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface"
               >
-                <span>💬 Contact Support</span>
+                <span>💬 Need Support</span>
               </a>
-              <Link
-                to="/app/flashcards"
-                className="hover:text-accent transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface"
-              >
-                <span>🗂️ Flashcards</span>
-              </Link>
             </div>
           </div>
         </footer>

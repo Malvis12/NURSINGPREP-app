@@ -86,6 +86,14 @@ html.light {
   --color-warning: #F59E0B;
 }
 
+/* Safe area padding utilities for iOS notch & status bar */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Tabular figures for time, scores, and statistics */
 .tabular-nums {
   font-variant-numeric: tabular-nums;

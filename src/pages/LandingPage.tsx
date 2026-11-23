@@ -8,8 +8,8 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-bg text-text selection:bg-accent/20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md">
+      {/* Header with iOS Safe Area support */}
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md pt-safe">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
             <img
