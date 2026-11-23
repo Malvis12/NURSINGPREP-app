@@ -1,9 +1,98 @@
 -- Migration: 20261123000020_trial_save_and_submit.sql
--- Allows free trial users (users who have an unsubmitted attempt granted by get_exam_questions)
--- to call save_answers, submit_exam, get_attempt_result, and resume_exam without being blocked by "Active membership required".
--- Active membership or being within the legitimate 1 free trial attempt is verified by checking attempt ownership.
+-- Fixes:
+-- 1. grade_attempt & submit_exam double-submission bug: submit_exam set submitted_at = now() then called grade_attempt,
+--    which checked "if v_submitted_at is not null then raise exception 'Exam attempt already submitted'".
+--    This caused submit_exam to ALWAYS fail with "Exam attempt already submitted"!
+-- 2. Allows free trial users (users with an unsubmitted attempt granted by get_exam_questions)
+--    to call save_answers, submit_exam, get_attempt_result, and resume_exam without being blocked.
 
--- 1. Update save_answers
+-- 1. Update grade_attempt: safely grades and updates the attempt row
+create or replace function public.grade_attempt(p_attempt_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_question_ids uuid[];
+  v_submitted_at timestamptz;
+  v_created_at timestamptz;
+  v_total int;
+  v_score int := 0;
+  v_results jsonb := '[]'::jsonb;
+  v_answers jsonb;
+  v_qid uuid;
+  v_q record;
+  v_chosen text;
+  v_is_correct boolean;
+  v_late boolean := false;
+  v_auto_submitted boolean := false;
+begin
+  select question_ids, answers, submitted_at, created_at, late, auto_submitted
+  into v_question_ids, v_answers, v_submitted_at, v_created_at, v_late, v_auto_submitted
+  from public.exam_attempts
+  where id = p_attempt_id
+  for update;
+
+  if not found then
+    raise exception 'Exam attempt not found';
+  end if;
+
+  -- Late check: now() > created_at + interval '7200 seconds' + interval '60 seconds'
+  if v_late or (now() > v_created_at + interval '7200 seconds' + interval '60 seconds') then
+    v_late := true;
+  end if;
+
+  v_answers := coalesce(v_answers, '{}'::jsonb);
+  v_total := coalesce(array_length(v_question_ids, 1), 0);
+
+  if v_total > 0 then
+    for i in 1 .. v_total loop
+      v_qid := v_question_ids[i];
+      select id, correct_answer, explanation
+      into v_q
+      from public.questions
+      where id = v_qid;
+
+      if found then
+        v_chosen := v_answers ->> v_qid::text;
+        v_is_correct := (v_chosen is not null and upper(trim(v_chosen)) = upper(trim(v_q.correct_answer)));
+        if v_is_correct then
+          v_score := v_score + 1;
+        end if;
+
+        v_results := v_results || jsonb_build_array(
+          jsonb_build_object(
+            'id', v_q.id,
+            'chosen', v_chosen,
+            'correct_answer', v_q.correct_answer,
+            'explanation', v_q.explanation
+          )
+        );
+      end if;
+    end loop;
+  end if;
+
+  update public.exam_attempts
+  set score = v_score,
+      total = v_total,
+      submitted_at = coalesce(v_submitted_at, now()),
+      late = v_late
+  where id = p_attempt_id;
+
+  return jsonb_build_object(
+    'score', v_score,
+    'total', v_total,
+    'late', v_late,
+    'auto_submitted', v_auto_submitted,
+    'results', v_results
+  );
+end;
+$$;
+
+revoke all on function public.grade_attempt(uuid) from public, anon, authenticated;
+
+-- 2. Update save_answers
 create or replace function public.save_answers(p_attempt_id uuid, p_changes jsonb)
 returns jsonb
 language plpgsql
@@ -106,7 +195,7 @@ $$;
 revoke all on function public.save_answers(uuid, jsonb) from public, anon;
 grant execute on function public.save_answers(uuid, jsonb) to authenticated;
 
--- 2. Update submit_exam
+-- 3. Update submit_exam
 create or replace function public.submit_exam(p_attempt_id uuid, p_answers jsonb)
 returns jsonb
 language plpgsql
@@ -177,11 +266,10 @@ begin
 
   update public.exam_attempts
   set
-    answers = v_merged_answers,
-    submitted_at = now()
+    answers = v_merged_answers
   where id = p_attempt_id;
 
-  -- Grade and return results
+  -- Grade and return results (grade_attempt sets submitted_at = now())
   return public.grade_attempt(p_attempt_id);
 end;
 $$;
@@ -189,7 +277,7 @@ $$;
 revoke all on function public.submit_exam(uuid, jsonb) from public, anon;
 grant execute on function public.submit_exam(uuid, jsonb) to authenticated;
 
--- 3. Update get_attempt_result (allow owner of the attempt to view their results)
+-- 4. Update get_attempt_result (allow owner of the attempt to view their results)
 create or replace function public.get_attempt_result(p_attempt_id uuid)
 returns jsonb
 language plpgsql
@@ -269,7 +357,7 @@ $$;
 revoke all on function public.get_attempt_result(uuid) from public, anon;
 grant execute on function public.get_attempt_result(uuid) to authenticated;
 
--- 4. Update resume_exam (allow trial owner to resume or see submitted status of their own attempt)
+-- 5. Update resume_exam (allow trial owner to resume or see submitted status of their own attempt)
 create or replace function public.resume_exam(p_attempt_id uuid)
 returns jsonb
 language plpgsql
