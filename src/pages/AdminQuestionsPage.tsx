@@ -206,58 +206,94 @@ export function AdminQuestionsPage() {
     }
   }
 
-  // 2. Fetch questions list (robust fallback for join schemas)
+  // 2. Fetch questions list (chunked to bypass PostgREST's 1,000 row hard limit)
   const loadQuestions = async () => {
     setIsLoading(true)
     try {
-      // First attempt: full join with courses and academic_levels
-      const { data, error } = await supabase
-        .from('questions')
-        .select(`
-          id,
-          course_id,
-          question_text,
-          option_a,
-          option_b,
-          option_c,
-          option_d,
-          correct_answer,
-          explanation,
-          difficulty,
-          topic,
-          status,
-          created_at,
-          courses (
-            id,
-            title,
-            code,
-            academic_levels (
-              code,
-              name
-            )
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(2000)
+      const allLoaded: any[] = []
+      const pageSize = 1000
+      let from = 0
+      let hasMore = true
 
-      if (!error && data) {
-        setQuestions((data as unknown as QuestionRow[]) || [])
-        return
+      while (hasMore) {
+        const to = from + pageSize - 1
+        const { data, error } = await supabase
+          .from('questions')
+          .select(`
+            id,
+            course_id,
+            question_text,
+            option_a,
+            option_b,
+            option_c,
+            option_d,
+            correct_answer,
+            explanation,
+            difficulty,
+            topic,
+            status,
+            created_at,
+            courses (
+              id,
+              title,
+              code,
+              academic_levels (
+                code,
+                name
+              )
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+
+        if (error) {
+          throw error
+        }
+
+        if (data && data.length > 0) {
+          allLoaded.push(...data)
+          if (data.length < pageSize) {
+            hasMore = false
+          } else {
+            from += pageSize
+          }
+        } else {
+          hasMore = false
+        }
       }
 
-      // Fallback attempt: query questions directly without deep nested foreign joins
-      console.warn('Joined query notice, trying flat fetch:', error?.message)
-      const { data: flatData, error: flatError } = await supabase
-        .from('questions')
-        .select('id, course_id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, topic, status, created_at')
-        .order('created_at', { ascending: false })
-        .limit(2000)
+      setQuestions((allLoaded as unknown as QuestionRow[]) || [])
+    } catch (err: any) {
+      console.warn('Joined paginated query notice, trying flat fetch chunking:', err?.message)
+      try {
+        const allFlat: any[] = []
+        const pageSize = 1000
+        let from = 0
+        let hasMore = true
 
-      if (flatError) throw flatError
+        while (hasMore) {
+          const to = from + pageSize - 1
+          const { data: flatData, error: flatError } = await supabase
+            .from('questions')
+            .select('id, course_id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, topic, status, created_at')
+            .order('created_at', { ascending: false })
+            .range(from, to)
 
-      if (flatData) {
-        // Map with loaded courses
-        const augmented: QuestionRow[] = flatData.map((q: any) => {
+          if (flatError) throw flatError
+
+          if (flatData && flatData.length > 0) {
+            allFlat.push(...flatData)
+            if (flatData.length < pageSize) {
+              hasMore = false
+            } else {
+              from += pageSize
+            }
+          } else {
+            hasMore = false
+          }
+        }
+
+        const augmented: QuestionRow[] = allFlat.map((q: any) => {
           const matchedCourse = courses.find((c) => c.id === q.course_id)
           return {
             ...q,
@@ -275,10 +311,10 @@ export function AdminQuestionsPage() {
           }
         })
         setQuestions(augmented)
+      } catch (fallbackErr: any) {
+        console.error('Failed to load questions:', fallbackErr)
+        toast.error(fallbackErr.message || 'Failed to load questions.')
       }
-    } catch (err: any) {
-      console.error('Failed to load questions:', err)
-      toast.error(err.message || 'Failed to load questions.')
     } finally {
       setIsLoading(false)
     }
