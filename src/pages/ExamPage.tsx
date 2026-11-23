@@ -916,14 +916,20 @@ export function ExamPage() {
       </header>
 
       {/* Main question area */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col space-y-6">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-8 flex flex-col space-y-6 pb-24 sm:pb-8">
         {/* Question Counter & Topic */}
-        <div className="flex items-center justify-between gap-2 border-b border-border pb-4">
-          <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted">
-            Question {currentIndex + 1} of {questions.length}
-          </span>
+        <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted">
+              Question {currentIndex + 1} of {questions.length}
+            </span>
+            <span className="text-xs text-muted/60">·</span>
+            <span className="text-xs text-muted font-medium">
+              {answeredCount} answered
+            </span>
+          </div>
           {currentQuestion.topic && (
-            <span className="text-xs font-extrabold uppercase tracking-widest text-accent bg-accent/10 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-widest text-accent bg-accent/10 px-2.5 py-0.5 rounded-full">
               {currentQuestion.topic}
             </span>
           )}
@@ -938,7 +944,7 @@ export function ExamPage() {
           className="space-y-6 flex-1 flex flex-col justify-between"
         >
           <div>
-            <h2 className="text-lg sm:text-2xl font-bold leading-relaxed text-text">
+            <h2 className="text-base sm:text-2xl font-bold leading-relaxed text-text">
               {currentQuestion.question_text}
             </h2>
           </div>
@@ -955,10 +961,10 @@ export function ExamPage() {
                   whileTap={{ scale: 0.99 }}
                   onClick={() => handleSelectOption(currentQuestion.id, opt.key)}
                   aria-label={`Option ${opt.key}: ${opt.text}`}
-                  className={`w-full text-left p-4 rounded-xl border flex items-center justify-between gap-4 motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`w-full text-left p-3.5 sm:p-4 rounded-xl border flex items-center justify-between gap-4 motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     isSelected
                       ? 'border-primary bg-primary/10 ring-1 ring-primary text-text'
-                      : 'border-border bg-surface text-text hover:border-border/80'
+                      : 'border-border bg-surface text-text hover:border-border/80 active:bg-surface/80'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -986,38 +992,15 @@ export function ExamPage() {
           </div>
         </motion.div>
 
-        {/* Navigation & Question Navigator */}
-        <div className="pt-4 border-t border-border space-y-4">
-          {/* Prev/Next buttons */}
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-              disabled={currentIndex === 0}
-              aria-label="Previous question"
-              className="border border-border hover:border-accent bg-surface text-text px-4 py-2 text-sm font-semibold rounded-xl disabled:opacity-30 disabled:pointer-events-none motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              Previous
-            </button>
-
-            <span className="text-xs text-muted font-medium">
-              Answered {answeredCount} of {questions.length}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-              disabled={currentIndex === questions.length - 1}
-              aria-label="Next question"
-              className="border border-border hover:border-accent bg-surface text-text px-4 py-2 text-sm font-semibold rounded-xl disabled:opacity-30 disabled:pointer-events-none motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              Next
-            </button>
+        {/* Question Selector Palette (Horizontal scrollable with smooth touch) */}
+        <div className="pt-2 border-t border-border space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted">
+            <span className="font-bold uppercase tracking-wider">Jump to Question</span>
+            <span>{Math.round((answeredCount / Math.max(1, questions.length)) * 100)}% Completed</span>
           </div>
 
-          {/* Navigator numbers (1-20): answered = filled, current = outlined */}
           <div
-            className="flex items-center gap-2 overflow-x-auto py-2 sm:flex-wrap sm:overflow-visible"
+            className="flex items-center gap-1.5 overflow-x-auto py-2 px-1 scrollbar-none touch-pan-x"
             role="navigation"
             aria-label="Question selector"
           >
@@ -1039,13 +1022,47 @@ export function ExamPage() {
                   key={q.id}
                   type="button"
                   onClick={() => setCurrentIndex(idx)}
-                  aria-label={`Go to question ${idx + 1}${isAnswered ? ', answered' : ''}${isCurrent ? ', current' : ''}`}
-                  className={`w-9 h-9 min-w-9 rounded-lg border text-xs font-semibold flex items-center justify-center motion-safe:transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${btnStyle}`}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border text-xs font-semibold shrink-0 transition flex items-center justify-center ${btnStyle}`}
                 >
                   {idx + 1}
                 </button>
               )
             })}
+          </div>
+        </div>
+
+        {/* Sticky Mobile & Desktop Bottom Navigation Bar */}
+        <div className="fixed sm:static bottom-0 left-0 right-0 z-20 border-t border-border bg-surface/95 backdrop-blur-md sm:bg-transparent sm:border-0 p-3 sm:p-0">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+              disabled={currentIndex === 0}
+              aria-label="Previous question"
+              className="flex-1 sm:flex-none border border-border hover:border-accent bg-surface text-text px-5 py-2.5 text-sm font-semibold rounded-xl disabled:opacity-30 disabled:pointer-events-none transition active:scale-[0.98]"
+            >
+              ← Previous
+            </button>
+
+            {currentIndex === questions.length - 1 ? (
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={isSubmitting}
+                className="flex-1 sm:flex-none bg-primary text-on-primary px-6 py-2.5 text-sm font-semibold rounded-xl hover:opacity-95 transition active:scale-[0.98]"
+              >
+                Submit Exam ✓
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+                aria-label="Next question"
+                className="flex-1 sm:flex-none bg-primary text-on-primary sm:bg-surface sm:text-text sm:border sm:border-border sm:hover:border-accent px-5 py-2.5 text-sm font-semibold rounded-xl transition active:scale-[0.98]"
+              >
+                Next →
+              </button>
+            )}
           </div>
         </div>
       </main>

@@ -1,6 +1,6 @@
 // Service Worker for Offline Test Resilience & Asset Caching (Production Safe)
-const CACHE_NAME = 'nursingprep-v2'
-const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.svg']
+const CACHE_NAME = 'nursingprep-v3'
+const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/favicon.svg', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
