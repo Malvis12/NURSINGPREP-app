@@ -82,7 +82,7 @@ function clearStoredExam(): void {
 
 export function ExamPage() {
   const navigate = useNavigate()
-  const { user, refreshProfile } = useAuth()
+  const { user, isActive, refreshProfile } = useAuth()
 
   // Exam phase
   const [phase, setPhase] = useState<ExamPhase>('start')
@@ -844,14 +844,26 @@ export function ExamPage() {
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={handleRetake}
-              aria-label="Retake exam"
-              className="bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold rounded-xl hover:opacity-95 motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              Retake exam
-            </button>
+            {isActive ? (
+              <button
+                type="button"
+                onClick={handleRetake}
+                aria-label="Retake exam"
+                className="bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold rounded-xl hover:opacity-95 motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Retake exam
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/pay')}
+                aria-label="Activate Pro for Unlimited Exams"
+                className="bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold rounded-xl hover:opacity-95 motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center gap-1.5"
+              >
+                <span>Activate Pro for Unlimited Practice (₦1,050)</span>
+                <span className="text-xs">→</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate('/app')}
@@ -900,19 +912,38 @@ export function ExamPage() {
                       {questionObj ? questionObj.question_text : `Question ID: ${item.id}`}
                     </p>
 
-                    {/* Answers block */}
+                    {/* Answers block with high-contrast color differentiation */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <div className="p-3 rounded-xl border border-border bg-bg">
-                        <span className="text-xs font-bold text-muted uppercase block mb-1">Your Choice</span>
-                        <span className="font-semibold text-text">
-                          {item.chosen ? `Option ${item.chosen.toUpperCase()}` : '(No answer selected)'}
+                      <div
+                        className={`p-3.5 rounded-xl border ${
+                          isCorrect
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                            : 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-80">
+                          Your Choice
                         </span>
+                        <div className="flex items-center gap-2 font-bold text-base">
+                          {isCorrect ? (
+                            <span className="text-emerald-400">✓</span>
+                          ) : (
+                            <span className="text-rose-400">✗</span>
+                          )}
+                          <span>
+                            {item.chosen ? `Option ${item.chosen.toUpperCase()}` : '(No answer selected)'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="p-3 rounded-xl border border-border bg-bg">
-                        <span className="text-xs font-bold text-muted uppercase block mb-1">Correct Answer</span>
-                        <span className="font-semibold text-text">
-                          Option {item.correct_answer.toUpperCase()}
+
+                      <div className="p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
+                        <span className="text-[11px] font-bold uppercase tracking-wider block mb-1 opacity-80">
+                          Correct Answer
                         </span>
+                        <div className="flex items-center gap-2 font-bold text-base text-emerald-400">
+                          <span>✓</span>
+                          <span>Option {item.correct_answer.toUpperCase()}</span>
+                        </div>
                       </div>
                     </div>
 
