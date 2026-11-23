@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
@@ -82,6 +82,7 @@ function clearStoredExam(): void {
 
 export function ExamPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, isActive, refreshProfile } = useAuth()
 
   // Exam phase
@@ -268,11 +269,17 @@ export function ExamPage() {
           const userStorageKey = `nursingprep_session_history_${user.id}`
           const existingHistory = JSON.parse(localStorage.getItem(userStorageKey) || '[]')
           const calculatedPercentage = data.total > 0 ? Math.round((data.score / data.total) * 100) : 0
+          
+          const searchParams = new URLSearchParams(window.location.search)
+          const stateObj = (location.state as any) || {}
+          const resolvedCourseId = stateObj.courseId || searchParams.get('courseId') || 'general'
+          const resolvedCourseTitle = stateObj.course || searchParams.get('course') || 'Nursing CBT Practice'
+
           const newRecord = {
             id: effectiveAttemptId || `attempt-${Date.now()}`,
-            courseTitle: 'Nursing CBT Practice',
-            courseId: 'general',
-            topicTitle: `Practice Drill (${data.total} Qs)`,
+            courseTitle: resolvedCourseTitle,
+            courseId: resolvedCourseId,
+            topicTitle: stateObj.topic || `Practice Drill (${data.total} Qs)`,
             date: 'Just now',
             score: data.score,
             total: data.total,
@@ -293,7 +300,7 @@ export function ExamPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [attemptId, flushPendingChanges, isTutorMode, questions])
+  }, [attemptId, flushPendingChanges, isTutorMode, location.state, questions, user?.id])
 
   const submitExamRef = useRef(submitExam)
   useEffect(() => {

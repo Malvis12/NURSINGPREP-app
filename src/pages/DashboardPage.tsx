@@ -845,7 +845,7 @@ export function DashboardPage() {
     toast.success(`Starting ${finalConfig.questionCount}-question ${finalConfig.mode === 'timed' ? 'timed CBT exam' : 'tutor practice'}!`)
 
     // Navigate to exam with both state and query params
-    navigate(`/app/exam?course=${encodeURIComponent(selectedCourse.title)}&count=${finalConfig.questionCount}&mode=${finalConfig.mode}`, {
+    navigate(`/app/exam?course=${encodeURIComponent(selectedCourse.title)}&courseId=${encodeURIComponent(selectedCourse.id)}&count=${finalConfig.questionCount}&mode=${finalConfig.mode}`, {
       state: {
         course: selectedCourse.title,
         courseId: selectedCourse.id,
@@ -948,27 +948,22 @@ export function DashboardPage() {
                   Nursing<strong className="text-accent font-extrabold">Prep</strong>
                 </span>
                 <span className="text-[10px] text-muted font-bold tracking-wider uppercase mt-0.5">
-                  Clinical Command
+                  Level {studentLevel}
                 </span>
               </div>
             </Link>
-
-            {/* Level Badge */}
-            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-              Level {studentLevel}
-            </span>
           </div>
 
           {/* Right Header Controls */}
-          <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Pro Status Pill - only shown when user actually has an active subscription */}
             {isActive && (
               <div
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                 title="Your full clinical membership is active"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="hidden xs:inline">Pro Active</span>
+                <span className="hidden xs:inline">Pro</span>
               </div>
             )}
 
@@ -976,32 +971,21 @@ export function DashboardPage() {
             {isAdmin && (
               <Link
                 to="/admin"
-                className="text-xs font-bold text-accent hover:underline hidden md:inline-flex items-center gap-1 px-2 py-1 rounded-md border border-accent/20 bg-accent/5"
+                className="text-xs font-bold text-accent hover:underline hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-accent/20 bg-accent/5"
               >
-                Admin Portal
+                Admin
               </Link>
             )}
 
             {/* Light/Dark Mode Switcher */}
             <ThemeToggle />
 
-            {/* Quick Practice Trigger Button */}
-            <button
-              type="button"
-              onClick={() => handleOpenSetup()}
-              aria-label="Open Practice Setup"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-surface border border-border hover:border-accent text-text motion-safe:transition-transform motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <SettingsSlidersIcon className="w-3.5 h-3.5 text-accent" />
-              <span>Configure Practice</span>
-            </button>
-
-            {/* Sign Out Button */}
+            {/* Compact Sign Out Button */}
             <button
               type="button"
               onClick={handleSignOut}
               aria-label="Sign out"
-              className="border border-border hover:border-accent bg-surface text-text px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="border border-border hover:border-accent bg-surface text-text px-3 py-1.5 text-xs font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               Sign out
             </button>
