@@ -1,10 +1,60 @@
 @import "tailwindcss";
 
-:root { --bg:#efece4; --surface:#F7F5EF; --text:#16165f; --muted:#5A5A86; --primary:#16165f; --on-primary:#efece4; --accent:#711325; --border:#D9D4C6; }
-@media (prefers-color-scheme: dark) { :root { --bg:#0E0E3A; --surface:#1C1C52; --text:#efece4; --muted:#B5B3C9; --primary:#efece4; --on-primary:#16165f; --accent:#C25A6E; --border:#2E2E70; } }
+:root {
+  --bg: #F8F9FA;
+  --surface: #FFFFFF;
+  --text: #0F172A;
+  --muted: #64748B;
+  --primary: #0F172A;
+  --on-primary: #F8FAFC;
+  --accent: #0284C7;
+  --border: #E2E8F0;
+  --brand-navy: #0B132B;
+}
+
+/* System dark fallback when no class is explicitly set */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --bg: #0B1015;
+    --surface: #121A22;
+    --text: #F1F5F9;
+    --muted: #94A3B8;
+    --primary: #F8FAFC;
+    --on-primary: #0F172A;
+    --accent: #38BDF8;
+    --border: #1E293B;
+    --brand-navy: #0F172A;
+  }
+}
+
+/* Explicit .dark class toggle */
+html.dark {
+  --bg: #0B1015;
+  --surface: #121A22;
+  --text: #F1F5F9;
+  --muted: #94A3B8;
+  --primary: #F8FAFC;
+  --on-primary: #0F172A;
+  --accent: #38BDF8;
+  --border: #1E293B;
+  --brand-navy: #0F172A;
+}
+
+/* Explicit .light class toggle */
+html.light {
+  --bg: #F8F9FA;
+  --surface: #FFFFFF;
+  --text: #0F172A;
+  --muted: #64748B;
+  --primary: #0F172A;
+  --on-primary: #F8FAFC;
+  --accent: #0284C7;
+  --border: #E2E8F0;
+  --brand-navy: #0B132B;
+}
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
 @theme inline {
@@ -16,7 +66,12 @@
   --color-on-primary: var(--on-primary);
   --color-accent: var(--accent);
   --color-border: var(--border);
-  --color-success: #2E8B6A;
-  --color-danger: #C0443C;
-  --color-warning: #D69A2D;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+}
+
+/* Tabular figures for time, scores, and statistics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

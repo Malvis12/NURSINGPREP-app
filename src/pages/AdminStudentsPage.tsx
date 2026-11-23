@@ -39,6 +39,7 @@ export function AdminStudentsPage() {
   const [students, setStudents] = useState<StudentListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
 
   // Drawer state
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
@@ -94,11 +95,45 @@ export function AdminStudentsPage() {
         // Ignore stale responses if a newer request has already fired
         if (!mounted || requestId !== requestIdRef.current) return
 
-        if (rpcError) {
-          throw new Error(rpcError.message || 'Failed to fetch students list')
-        }
+        if (!rpcError && resData) {
+          setStudents((resData as StudentListItem[]) || [])
+        } else {
+          // Direct fallback from profiles table
+          console.warn('[AdminStudents] RPC failed or returned error, falling back to direct profiles query:', rpcError?.message)
+          let query = supabase
+            .from('profiles')
+            .select('id, full_name, level, is_active, created_at', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range((page - 1) * pageSize, page * pageSize - 1)
 
-        setStudents((resData as StudentListItem[]) || [])
+          if (levelFilter) {
+            query = query.eq('level', Number(levelFilter))
+          }
+          if (statusFilter === 'active') {
+            query = query.eq('is_active', true)
+          } else if (statusFilter === 'pending_payment') {
+            query = query.eq('is_active', false)
+          }
+          if (debouncedSearch.trim()) {
+            query = query.ilike('full_name', `%${debouncedSearch.trim()}%`)
+          }
+
+          const { data: profData, count: profCount, error: profErr } = await query
+
+          if (profErr) throw profErr
+
+          const mapped: StudentListItem[] = (profData || []).map((p) => ({
+            id: p.id,
+            full_name: p.full_name,
+            email: null,
+            level: p.level,
+            is_active: p.is_active,
+            created_at: p.created_at,
+            total_count: profCount || profData?.length || 0,
+          }))
+
+          setStudents(mapped)
+        }
       } catch (err: unknown) {
         if (!mounted || requestId !== requestIdRef.current) return
         setError(err instanceof Error ? err.message : 'Failed to fetch students list')
@@ -124,6 +159,36 @@ export function AdminStudentsPage() {
 
   const handleCloseDetail = () => {
     setIsDrawerOpen(false)
+  }
+
+  const handleToggleActive = async (studentId: string, currentStatus: boolean, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActionLoadingId(studentId)
+    try {
+      const newStatus = !currentStatus
+      // Try RPC first, fallback to direct update
+      const { error: rpcErr } = await supabase.rpc('admin_toggle_student_status', {
+        p_user_id: studentId,
+        p_is_active: newStatus,
+      })
+
+      if (rpcErr) {
+        const { error: updateErr } = await supabase
+          .from('profiles')
+          .update({ is_active: newStatus })
+          .eq('id', studentId)
+
+        if (updateErr) throw updateErr
+      }
+
+      setStudents((prev) =>
+        prev.map((s) => (s.id === studentId ? { ...s, is_active: newStatus } : s))
+      )
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to update student status')
+    } finally {
+      setActionLoadingId(null)
+    }
   }
 
   const handleRetry = () => {
@@ -270,6 +335,9 @@ export function AdminStudentsPage() {
                     <th scope="col" className="py-3 px-4">
                       Joined
                     </th>
+                    <th scope="col" className="py-3 px-4 text-right">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -316,6 +384,29 @@ export function AdminStudentsPage() {
                       </td>
                       <td className="py-3.5 px-4 text-muted whitespace-nowrap">
                         {formatDate(student.created_at)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleActive(student.id, student.is_active, e)}
+                          disabled={actionLoadingId === student.id}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all ${
+                            student.is_active
+                              ? 'border-border bg-surface text-muted hover:border-red-500/50 hover:text-red-400'
+                              : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black shadow-xs'
+                          } disabled:opacity-50`}
+                          title={
+                            student.is_active
+                              ? 'Deactivate student account'
+                              : 'Activate student account (1-Click for offline/bank transfer)'
+                          }
+                        >
+                          {actionLoadingId === student.id
+                            ? 'Updating...'
+                            : student.is_active
+                            ? 'Deactivate'
+                            : '⚡ Activate Pro'}
+                        </button>
                       </td>
                     </tr>
                   ))}

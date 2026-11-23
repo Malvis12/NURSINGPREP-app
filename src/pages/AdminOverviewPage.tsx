@@ -7,6 +7,8 @@ export interface OverviewData {
   active_students: number
   pending_students: number
   verified_revenue: number | string
+  access_revenue?: number | string
+  unlock_revenue?: number | string
   question_bank: {
     total_approved: number
     by_level?: Record<string, number>
@@ -219,7 +221,14 @@ export function AdminOverviewPage() {
             <div className="text-3xl font-extrabold tracking-tight">
               {formatRevenue(data.verified_revenue)}
             </div>
-            <p className="text-xs text-muted font-medium">Paystack successful charges</p>
+            <div className="flex flex-col gap-0.5 pt-1 text-[11px] font-semibold text-muted">
+              <span>Access: {formatRevenue(data.access_revenue || data.verified_revenue)}</span>
+              {Boolean(data.unlock_revenue) && (
+                <span className="text-amber-500">
+                  Unlocks: {formatRevenue(data.unlock_revenue)}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Card 3: Question Bank */}

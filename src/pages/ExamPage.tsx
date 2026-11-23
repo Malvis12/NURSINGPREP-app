@@ -221,6 +221,28 @@ export function ExamPage() {
       clearStoredExam()
       setResultsData(data as ExamSubmissionResponse)
       setPhase('results')
+
+      // Save completed attempt locally as immediate fallback for instant dashboard reflection
+      try {
+        const existingHistory = JSON.parse(localStorage.getItem('nursingprep_session_history_v2') || '[]')
+        const calculatedPercentage = data.total > 0 ? Math.round((data.score / data.total) * 100) : 0
+        const newRecord = {
+          id: effectiveAttemptId || `attempt-${Date.now()}`,
+          courseTitle: 'Nursing CBT Practice',
+          courseId: 'general',
+          topicTitle: `Practice Drill (${data.total} Qs)`,
+          date: 'Just now',
+          score: data.score,
+          total: data.total,
+          percentage: calculatedPercentage,
+          mode: 'timed',
+          difficulty: 'medium',
+          status: calculatedPercentage >= 75 ? 'passed' : 'review',
+        }
+        localStorage.setItem('nursingprep_session_history_v2', JSON.stringify([newRecord, ...existingHistory.slice(0, 9)]))
+      } catch {
+        // Ignore localStorage error
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An error occurred during submission.'
       toast.error(msg)
@@ -390,7 +412,11 @@ export function ExamPage() {
     retryCountRef.current = 0
 
     try {
-      const { data, error } = await supabase.rpc('get_exam_questions', { p_count: 20 })
+      const searchParams = new URLSearchParams(window.location.search)
+      const requestedCount = parseInt(searchParams.get('count') || '20', 10)
+      const validCount = !isNaN(requestedCount) && requestedCount > 0 ? requestedCount : 20
+
+      const { data, error } = await supabase.rpc('get_exam_questions', { p_count: validCount })
       if (error || !data) {
         if (error?.message?.includes('NO_QUESTIONS_FOR_LEVEL')) {
           setNoQuestionsAvailable(true)
@@ -411,7 +437,9 @@ export function ExamPage() {
         return
       }
 
-      const targetDeadline = Date.now() + TOTAL_TIME_SECONDS * 1000
+      // Calculate time: 1 minute per question (minimum 10 mins, maximum 120 mins)
+      const examSeconds = Math.max(10 * 60, Math.min(120 * 60, returnedQuestions.length * 60))
+      const targetDeadline = Date.now() + examSeconds * 1000
       deadlineRef.current = targetDeadline
       setDeadline(targetDeadline)
 
@@ -422,7 +450,7 @@ export function ExamPage() {
       setQuestions(returnedQuestions)
       setCurrentIndex(0)
       setAnswers({})
-      setTimeLeft(TOTAL_TIME_SECONDS)
+      setTimeLeft(examSeconds)
       hasSubmittedRef.current = false
       setPhase('in_progress')
     } catch (err: unknown) {
@@ -586,29 +614,35 @@ export function ExamPage() {
   // PHASE 1: START SCREEN
   // -------------------------------------------------------------
   if (phase === 'start') {
+    const searchParams = new URLSearchParams(window.location.search)
+    const urlCount = parseInt(searchParams.get('count') || '20', 10)
+    const displayCount = !isNaN(urlCount) && urlCount > 0 ? urlCount : 20
+    const displayCourse = searchParams.get('course') || 'Nursing Examination'
+    const displayMode = searchParams.get('mode') === 'tutor' ? 'Tutor & Study Mode' : 'Timed Computer-Based Test'
+
     return (
       <div className="min-h-screen bg-bg text-text flex flex-col justify-center items-center p-6">
         <div className="w-full max-w-lg border border-border bg-surface p-8 rounded-2xl space-y-6">
           <div className="space-y-2">
             <span className="text-xs uppercase font-extrabold tracking-widest text-accent">
-              Computer-Based Test
+              {displayMode}
             </span>
             <h1 className="text-3xl font-extrabold tracking-tight">
-              Nursing Examination
+              {displayCourse}
             </h1>
             <p className="text-sm text-muted">
-              Prepare yourself before beginning. Once started, your timed exam session will begin immediately.
+              Prepare yourself before beginning. Once started, your exam session will begin immediately.
             </p>
           </div>
 
           <div className="border border-border bg-bg p-5 rounded-xl space-y-3">
             <div className="flex items-center justify-between text-sm font-semibold">
               <span className="text-muted">Total Questions:</span>
-              <span className="font-bold text-text">20 questions</span>
+              <span className="font-bold text-text tabular-nums">{displayCount} questions</span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold">
               <span className="text-muted">Allocated Time:</span>
-              <span className="font-bold text-text">20 minutes</span>
+              <span className="font-bold text-text tabular-nums">{displayCount} minutes</span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold">
               <span className="text-muted">Format:</span>
@@ -624,7 +658,7 @@ export function ExamPage() {
               aria-label="Start exam"
               className="w-full bg-primary text-on-primary py-3.5 text-sm font-semibold rounded-xl hover:opacity-95 disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              {isLoading ? 'Preparing exam...' : 'Start exam'}
+              {isLoading ? 'Preparing exam...' : `Start exam (${displayCount} Qs)`}
             </button>
             <button
               type="button"

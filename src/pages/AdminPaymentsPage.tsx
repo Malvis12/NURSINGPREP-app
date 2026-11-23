@@ -11,6 +11,7 @@ export interface PaymentListItem {
   amount_minor: number
   currency: string
   status: 'pending' | 'success' | 'failed' | 'duplicate' | string
+  purpose?: 'access' | 'unlock' | string
   verified_at: string | null
   created_at: string
   total_count: number
@@ -57,6 +58,7 @@ export function AdminPaymentsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [purposeFilter, setPurposeFilter] = useState('')
   const [pageSize, setPageSize] = useState(20)
   const [page, setPage] = useState(1)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -199,6 +201,22 @@ export function AdminPaymentsPage() {
             <option value="failed">Failed</option>
             <option value="duplicate">Duplicate</option>
           </select>
+
+          {/* Purpose Filter */}
+          <select
+            id="payment-purpose-filter"
+            value={purposeFilter}
+            onChange={(e) => {
+              setPurposeFilter(e.target.value)
+              setPage(1)
+            }}
+            aria-label="Filter by purpose"
+            className="border border-border bg-bg text-text px-3 py-2 text-xs font-semibold rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <option value="">All Purposes</option>
+            <option value="access">Access Fees (₦1,050)</option>
+            <option value="unlock">Security Unlocks (₦500)</option>
+          </select>
         </div>
 
         {/* Page Size Selector */}
@@ -271,6 +289,9 @@ export function AdminPaymentsPage() {
                       Reference
                     </th>
                     <th scope="col" className="py-3 px-4">
+                      Purpose
+                    </th>
+                    <th scope="col" className="py-3 px-4">
                       Amount
                     </th>
                     <th scope="col" className="py-3 px-4">
@@ -310,6 +331,17 @@ export function AdminPaymentsPage() {
                       </td>
                       <td className="py-3.5 px-4 font-mono text-xs text-muted whitespace-nowrap">
                         {payment.reference}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {payment.purpose === 'unlock' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                            🔒 Unlock
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                            🎓 Access
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-text whitespace-nowrap">
                         {formatAmount(payment.amount_minor, payment.currency)}

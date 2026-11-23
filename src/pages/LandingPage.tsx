@@ -136,7 +136,7 @@ export function LandingPage() {
             Make your next study session count.
           </h2>
           <p className="text-base text-muted max-w-xl mx-auto leading-relaxed">
-            Sign up with Wellspring University and your level. One-time assessment fee, amount to be announced.
+            Create your account with your institution and academic cohort to begin high-yield clinical practice.
           </p>
           <div className="pt-2">
             <button
@@ -150,11 +150,22 @@ export function LandingPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border mt-20 py-8 bg-surface">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
-          <p className="font-semibold text-text">Nursing CBT practice</p>
-          <p>Practice with purpose · Progress with confidence</p>
+      {/* Footer & Compliance Disclaimers */}
+      <footer className="border-t border-border mt-20 py-10 bg-surface">
+        <div className="max-w-5xl mx-auto px-6 space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
+            <p className="font-semibold text-text">NursingPrep CBT Studio</p>
+            <p>Practice with purpose · Progress with confidence</p>
+          </div>
+
+          <div className="border-t border-border/60 pt-6 space-y-3 text-[11px] text-muted leading-relaxed">
+            <p>
+              <strong className="text-text">Examination Non-Affiliation Notice:</strong> NursingPrep is an independent educational preparatory platform designed for clinical revision and examination simulation. It is not affiliated with, sponsored by, or officially endorsed by the Nursing and Midwifery Council of Nigeria (NMCN), the National Council of State Boards of Nursing (NCSBN / NCLEX), or any university governing council. All trademarks are the property of their respective owners.
+            </p>
+            <p>
+              <strong className="text-text">Medical Disclaimer:</strong> Content, question stems, and rationales provided on this platform are for academic study and licensure practice only. They do not constitute formal medical advice, clinical nursing protocols, or diagnostic prescriptions.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

@@ -111,6 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    try {
+      await supabase.rpc('end_session')
+    } catch {
+      // Best-effort cleanup
+    }
     await supabase.auth.signOut()
     setUser(null)
     setLevel(null)

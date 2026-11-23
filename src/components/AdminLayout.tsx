@@ -4,6 +4,7 @@ import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { ThemeToggle } from './ThemeToggle'
 
 // Shared navigation items between desktop sidebar and mobile slide-in panel
 const ADMIN_NAV_ITEMS = [
@@ -228,6 +229,7 @@ export function AdminLayout() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link
               to="/app"
               className="border border-border hover:border-accent bg-surface text-text px-3.5 py-1.5 text-xs font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] inline-flex items-center gap-1.5"

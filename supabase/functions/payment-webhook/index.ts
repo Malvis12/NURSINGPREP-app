@@ -170,15 +170,6 @@ export async function handlePaymentWebhook(req: Request): Promise<Response> {
     });
   }
 
-  const expectedAmountMinor = rawPaymentAmount ? parseInt(rawPaymentAmount, 10) : NaN;
-  if (!Number.isInteger(expectedAmountMinor) || expectedAmountMinor <= 0) {
-    console.error("Invalid PAYMENT_AMOUNT_MINOR configuration");
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
@@ -189,7 +180,7 @@ export async function handlePaymentWebhook(req: Request): Promise<Response> {
   // Query payments table for this reference
   const { data: payment, error: paymentError } = await supabaseAdmin
     .from("payments")
-    .select("user_id, reference, amount_minor, currency, status")
+    .select("id, user_id, reference, amount_minor, currency, status, purpose")
     .eq("reference", reference)
     .maybeSingle();
 
@@ -222,6 +213,22 @@ export async function handlePaymentWebhook(req: Request): Promise<Response> {
     payment.user_id
   );
 
+  // Expected amount check:
+  // If purpose is 'access', check against PAYMENT_AMOUNT_MINOR.
+  // If purpose is 'unlock', verify amount matches the recorded payment.amount_minor.
+  const isUnlock = payment.purpose === "unlock";
+  const expectedAmountMinor = isUnlock
+    ? payment.amount_minor
+    : (rawPaymentAmount ? parseInt(rawPaymentAmount, 10) : NaN);
+
+  if (!isUnlock && (!Number.isInteger(expectedAmountMinor) || expectedAmountMinor <= 0)) {
+    console.error("Invalid PAYMENT_AMOUNT_MINOR configuration");
+    return new Response(JSON.stringify({ error: "Server configuration error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   let failureReason: string | null = null;
 
   if (payment.status !== "pending") {
@@ -234,6 +241,8 @@ export async function handlePaymentWebhook(req: Request): Promise<Response> {
     failureReason = `Currency mismatch (payload: ${data.currency}, payment: ${payment.currency})`;
   } else if (data.metadata?.user_id !== payment.user_id) {
     failureReason = `User ID mismatch in metadata`;
+  } else if (data.metadata?.purpose && data.metadata?.purpose !== payment.purpose) {
+    failureReason = `Purpose mismatch (metadata: ${data.metadata?.purpose}, payment: ${payment.purpose})`;
   } else if (userError || !userData?.user?.email) {
     failureReason = `Auth user not found for payment user_id`;
   } else {
@@ -265,7 +274,37 @@ export async function handlePaymentWebhook(req: Request): Promise<Response> {
     );
   }
 
-  // 5. When all pass: call activate_payment(reference) via service_role client. Never write profiles directly. Return 200.
+  // 5. When all pass: call activate_payment or unlock_after_payment based on strict purpose
+  if (payment.purpose === "unlock") {
+    // 5a. Mark payment verified & successful
+    await supabaseAdmin
+      .from("payments")
+      .update({ status: "success", verified_at: new Date().toISOString() })
+      .eq("id", payment.id);
+
+    const { error: unlockError } = await supabaseAdmin.rpc("unlock_after_payment", {
+      p_payment_id: payment.id,
+      p_user_id: payment.user_id,
+    });
+
+    if (unlockError) {
+      console.error("unlock_after_payment RPC call failed:", unlockError.message);
+      return new Response(JSON.stringify({ error: "Failed to unlock student after payment" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(
+      JSON.stringify({ received: true, verified: true, unlocked: true }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  // 5b. Default access payment activation
   const { data: activated, error: activateError } = await supabaseAdmin.rpc("activate_payment", {
     p_reference: reference,
   });
