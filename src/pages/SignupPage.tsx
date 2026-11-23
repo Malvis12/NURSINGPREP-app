@@ -54,9 +54,11 @@ export function SignupPage() {
       {/* Top Header */}
       <header className="w-full max-w-5xl mx-auto flex items-center justify-between py-2">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-black text-xs shadow-sm">
-            NP
-          </div>
+          <img
+            src="/logo.jpg"
+            alt="NursingPrep Logo"
+            className="w-8 h-8 rounded-lg object-cover border border-border shadow-xs"
+          />
           <span className="font-extrabold text-base tracking-tight">NursingPrep</span>
         </Link>
         <ThemeToggle />

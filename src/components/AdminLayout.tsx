@@ -41,7 +41,12 @@ export function AdminLayout() {
     <div className="min-h-screen bg-bg text-text flex flex-col md:flex-row">
       {/* Mobile Topbar (< md breakpoint) */}
       <header className="md:hidden border-b border-border bg-surface px-4 py-3 flex items-center justify-between shrink-0">
-        <Link to="/admin" className="flex items-center gap-2 group">
+        <Link to="/admin" className="flex items-center gap-2.5 group">
+          <img
+            src="/logo.jpg"
+            alt="NursingPrep Logo"
+            className="w-7 h-7 rounded-lg object-cover border border-border shadow-xs"
+          />
           <span className="font-extrabold text-base tracking-tight">
             Nursing<strong className="text-accent font-extrabold">Prep</strong>
           </span>
@@ -71,7 +76,12 @@ export function AdminLayout() {
         aria-label="Admin Navigation"
       >
         <div className="p-6 border-b border-border flex items-center justify-between">
-          <Link to="/admin" className="flex items-center gap-2 group">
+          <Link to="/admin" className="flex items-center gap-2.5 group">
+            <img
+              src="/logo.jpg"
+              alt="NursingPrep Logo"
+              className="w-8 h-8 rounded-xl object-cover border border-border shadow-xs"
+            />
             <span className="font-extrabold text-lg tracking-tight">
               Nursing<strong className="text-accent font-extrabold">Prep</strong>
             </span>

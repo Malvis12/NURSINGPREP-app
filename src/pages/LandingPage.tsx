@@ -9,10 +9,12 @@ export function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary font-black text-sm shadow-sm">
-              NP
-            </div>
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+            <img
+              src="/logo.jpg"
+              alt="NursingPrep Logo"
+              className="w-8 h-8 rounded-lg object-cover border border-border shadow-xs"
+            />
             <span className="font-extrabold text-lg tracking-tight">NursingPrep</span>
           </div>
           <div className="flex items-center gap-3">
@@ -155,10 +157,12 @@ export function LandingPage() {
       <footer className="border-t border-border mt-20 py-10 bg-surface">
         <div className="max-w-5xl mx-auto px-6 space-y-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded bg-primary flex items-center justify-center text-on-primary font-bold text-[10px]">
-                NP
-              </div>
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/logo.jpg"
+                alt="NursingPrep Logo"
+                className="w-6 h-6 rounded-md object-cover border border-border"
+              />
               <span className="font-semibold text-text">NursingPrep Academic Platform</span>
             </div>
             <p>Curriculum-aligned clinical preparation</p>
