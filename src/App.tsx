@@ -83,7 +83,7 @@ export default function App() {
                 <Route
                   path="/app"
                   element={
-                    <ProtectedRoute requireLevel requireActive>
+                    <ProtectedRoute requireLevel>
                       <DashboardPage />
                     </ProtectedRoute>
                   }
@@ -91,7 +91,7 @@ export default function App() {
                 <Route
                   path="/app/exam"
                   element={
-                    <ProtectedRoute requireLevel requireActive>
+                    <ProtectedRoute requireLevel requireActive allowTrialExam>
                       <ExamPage />
                     </ProtectedRoute>
                   }

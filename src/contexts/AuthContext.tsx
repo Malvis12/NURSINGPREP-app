@@ -8,6 +8,8 @@ export interface AuthContextType {
   level: number | null
   isActive: boolean
   isAdmin: boolean
+  submittedAttemptsCount: number
+  canTakeExam: boolean
   refreshProfile: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -18,6 +20,8 @@ const AuthContext = createContext<AuthContextType>({
   level: null,
   isActive: false,
   isAdmin: false,
+  submittedAttemptsCount: 0,
+  canTakeExam: false,
   refreshProfile: async () => {},
   signOut: async () => {},
 })
@@ -27,25 +31,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [level, setLevel] = useState<number | null>(null)
   const [isActive, setIsActive] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
+  const [submittedAttemptsCount, setSubmittedAttemptsCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('level, is_active')
-        .eq('id', userId)
-        .maybeSingle()
-      if (!error && data) {
-        setLevel(data.level ?? null)
-        setIsActive(Boolean(data.is_active))
+      const [{ data: profileData }, { count: attemptsCount }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('level, is_active')
+          .eq('id', userId)
+          .maybeSingle(),
+        supabase
+          .from('exam_attempts')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .not('submitted_at', 'is', null),
+      ])
+
+      if (profileData) {
+        setLevel(profileData.level ?? null)
+        setIsActive(Boolean(profileData.is_active))
       } else {
         setLevel(null)
         setIsActive(false)
       }
+
+      setSubmittedAttemptsCount(attemptsCount ?? 0)
     } catch {
       setLevel(null)
       setIsActive(false)
+      setSubmittedAttemptsCount(0)
     }
   }
 
@@ -121,10 +137,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLevel(null)
     setIsActive(false)
     setIsAdmin(false)
+    setSubmittedAttemptsCount(0)
   }
 
+  const canTakeExam = isActive || submittedAttemptsCount === 0
+
   return (
-    <AuthContext.Provider value={{ user, loading, level, isActive, isAdmin, refreshProfile, signOut }}>
+    <AuthContext.Provider value={{ user, loading, level, isActive, isAdmin, submittedAttemptsCount, canTakeExam, refreshProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   )

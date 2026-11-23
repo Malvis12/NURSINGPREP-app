@@ -6,6 +6,7 @@ interface ProtectedRouteProps {
   children: ReactNode
   requireLevel?: boolean
   requireActive?: boolean
+  allowTrialExam?: boolean
   blockIfOnboarded?: boolean
   blockIfActive?: boolean
 }
@@ -14,10 +15,11 @@ export function ProtectedRoute({
   children,
   requireLevel = false,
   requireActive = false,
+  allowTrialExam = false,
   blockIfOnboarded = false,
   blockIfActive = false,
 }: ProtectedRouteProps) {
-  const { user, loading, level, isActive } = useAuth()
+  const { user, loading, level, isActive, canTakeExam } = useAuth()
 
   if (loading) {
     return (
@@ -35,8 +37,11 @@ export function ProtectedRoute({
     return <Navigate to="/onboarding" replace />
   }
 
-  if (requireActive && !isActive) {
-    return <Navigate to="/pay" replace />
+  // If trial is allowed, let the user in if active OR if they have not used their free trial yet
+  if (requireActive) {
+    if (allowTrialExam ? !canTakeExam : !isActive) {
+      return <Navigate to="/pay" replace />
+    }
   }
 
   if (blockIfOnboarded && level !== null) {

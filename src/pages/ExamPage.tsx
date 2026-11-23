@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 export interface ExamQuestion {
   id: string
@@ -79,6 +80,7 @@ function clearStoredExam(): void {
 
 export function ExamPage() {
   const navigate = useNavigate()
+  const { refreshProfile } = useAuth()
 
   // Exam phase
   const [phase, setPhase] = useState<ExamPhase>('start')
@@ -221,6 +223,7 @@ export function ExamPage() {
       clearStoredExam()
       setResultsData(data as ExamSubmissionResponse)
       setPhase('results')
+      void refreshProfile()
 
       // Save completed attempt locally as immediate fallback for instant dashboard reflection
       try {
@@ -418,6 +421,11 @@ export function ExamPage() {
 
       const { data, error } = await supabase.rpc('get_exam_questions', { p_count: validCount })
       if (error || !data) {
+        if (error?.message?.includes('TRIAL_EXHAUSTED')) {
+          toast.error('Free trial exam completed. Activate Pro to unlock unlimited exam practice!')
+          navigate('/pay')
+          return
+        }
         if (error?.message?.includes('NO_QUESTIONS_FOR_LEVEL')) {
           setNoQuestionsAvailable(true)
           setIsLoading(false)

@@ -353,7 +353,7 @@ function renderCourseIcon(type: string, className = 'w-5 h-5') {
 export function DashboardPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, level: authLevel, isActive, isAdmin, signOut } = useAuth()
+  const { user, level: authLevel, isActive, isAdmin, canTakeExam, submittedAttemptsCount, signOut } = useAuth()
 
   // 1. Level determination: default to user's auth level (200, 300, 400) or fallback to 300
   const studentLevel = useMemo(() => {
@@ -804,6 +804,12 @@ export function DashboardPage() {
 
   // Launch session directly or from setup
   const handleStartSession = (customOverride?: Partial<PracticeSetupConfig>) => {
+    if (!canTakeExam) {
+      toast.error('Free trial exam completed. Activate Pro to unlock unlimited exam practice!')
+      navigate('/pay')
+      return
+    }
+
     const finalConfig = { ...setupConfig, ...(customOverride || {}) }
     const selectedCourse = activeCourseList.find((c) => c.id === finalConfig.courseId) || activeCourseList[0] || NURSING_COURSES[0]
     const selectedTopic =
@@ -974,6 +980,38 @@ export function DashboardPage() {
           </div>
         </div>
       </header>
+
+      {/* ==================================================================== */}
+      {/* FREE TRIAL / PRO STATUS BANNER */}
+      {/* ==================================================================== */}
+      {!isActive && (
+        <div className="border-b border-border bg-accent/10 text-text">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🎁</span>
+              <div>
+                <p className="text-xs sm:text-sm font-bold">
+                  {submittedAttemptsCount === 0
+                    ? 'Free Trial Active: You have 1 full practice exam drill available across any course.'
+                    : 'Free Trial Completed: Activate Pro membership to unlock unlimited exams & rationales.'}
+                </p>
+                <p className="text-[11px] text-muted">
+                  {submittedAttemptsCount === 0
+                    ? 'Configure your questions and test the timed CBT platform before activating Pro.'
+                    : 'Get unlimited access to all 200L–400L clinical modules and active recall flashcards.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => (submittedAttemptsCount === 0 ? handleOpenSetup() : navigate('/pay'))}
+              className="bg-primary text-on-primary text-xs font-bold px-3.5 py-1.5 rounded-lg hover:opacity-90 shrink-0 self-end sm:self-center transition"
+            >
+              {submittedAttemptsCount === 0 ? 'Start Free Trial Exam' : 'Activate Pro (₦1,050)'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ==================================================================== */}
       {/* CELEBRATORY PRO ACCESS UNLOCKED BANNER */}
