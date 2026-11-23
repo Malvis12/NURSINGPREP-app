@@ -1485,7 +1485,7 @@ export function DashboardPage() {
           </div>
 
           {/* Mobile Card View (< sm breakpoint) */}
-          <div className="sm:hidden space-y-3">
+          <div className="sm:hidden space-y-3 pb-20">
             {sessions.map((sess) => {
               const isPassing = sess.percentage >= 70
 
@@ -1523,7 +1523,80 @@ export function DashboardPage() {
             })}
           </div>
         </section>
+
+        {/* ------------------------------------------------------------------ */}
+        {/* DASHBOARD FOOTER (REQUEST COURSES & SUPPORT) */}
+        {/* ------------------------------------------------------------------ */}
+        <footer className="border-t border-border pt-8 pb-24 sm:pb-12 text-sm text-muted">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <img src="/logo.jpg" alt="Logo" className="w-5 h-5 rounded-md object-cover" />
+              <span className="font-bold text-xs uppercase tracking-wider text-text">NursingPrep Curriculum</span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium">
+              <a
+                href="mailto:support@nursingprep.com?subject=Request%20More%20Courses"
+                className="hover:text-accent transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface"
+              >
+                <span>📚 Request More Courses</span>
+              </a>
+              <a
+                href="mailto:support@nursingprep.com?subject=Student%20Support%20Inquiry"
+                className="hover:text-accent transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface"
+              >
+                <span>💬 Contact Support</span>
+              </a>
+              <Link
+                to="/app/flashcards"
+                className="hover:text-accent transition flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface"
+              >
+                <span>🗂️ Flashcards</span>
+              </Link>
+            </div>
+          </div>
+        </footer>
       </main>
+
+      {/* ==================================================================== */}
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      {/* ==================================================================== */}
+      <nav aria-label="Mobile Navigation" className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border px-3 py-2">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          <Link
+            to="/app"
+            className="flex flex-col items-center gap-1 text-[11px] font-bold text-accent"
+          >
+            <span className="text-base">🏠</span>
+            <span>Dashboard</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleQuickStandardExam}
+            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
+          >
+            <span className="text-base">⚡</span>
+            <span>Quick CBT</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenSetup()}
+            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
+          >
+            <span className="text-base">⚙️</span>
+            <span>Custom Drill</span>
+          </button>
+
+          <Link
+            to="/app/flashcards"
+            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
+          >
+            <span className="text-base">🗂️</span>
+            <span>Flashcards</span>
+          </Link>
+        </div>
+      </nav>
 
       {/* ==================================================================== */}
       {/* PRACTICE SETUP MODAL / DRAWER */}
