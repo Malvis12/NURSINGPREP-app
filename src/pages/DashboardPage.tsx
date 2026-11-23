@@ -182,7 +182,6 @@ const NURSING_COURSES: CourseItem[] = [
   },
 ]
 
-const STORAGE_SESSIONS_KEY = 'nursingprep_session_history_v2'
 const STORAGE_PRO_BANNER_KEY = 'nursingprep_pro_banner_dismissed'
 
 // ============================================================================
@@ -505,18 +504,42 @@ export function DashboardPage() {
   })
 
   // 5. Historical Sessions & Live Database Exam Attempts
+  // Always initialize empty or load strictly from user-scoped key so a previous user's session history never leaks!
   const [sessions, setSessions] = useState<PracticeSessionRecord[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_SESSIONS_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed)) return parsed
+      if (user?.id) {
+        const saved = localStorage.getItem(`nursingprep_session_history_${user.id}`)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (Array.isArray(parsed)) return parsed
+        }
       }
     } catch {
       // Ignore
     }
     return []
   })
+
+  // Whenever the authenticated user changes, reset or reload user-scoped session history
+  useEffect(() => {
+    if (!user?.id) {
+      setSessions([])
+      return
+    }
+    try {
+      const saved = localStorage.getItem(`nursingprep_session_history_${user.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) {
+          setSessions(parsed)
+          return
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    setSessions([])
+  }, [user?.id])
 
   // Live real database stats state
   const [dbStats, setDbStats] = useState<{
@@ -767,14 +790,15 @@ export function DashboardPage() {
     }))
   }, [studentLevel])
 
-  // Save session list to localStorage whenever changed
+  // Save session list to user-scoped localStorage whenever changed
   useEffect(() => {
+    if (!user?.id) return
     try {
-      localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(sessions))
+      localStorage.setItem(`nursingprep_session_history_${user.id}`, JSON.stringify(sessions))
     } catch {
       // Ignore storage errors
     }
-  }, [sessions])
+  }, [sessions, user?.id])
 
   // Sign out handler
   const handleSignOut = async () => {
@@ -937,14 +961,16 @@ export function DashboardPage() {
 
           {/* Right Header Controls */}
           <div className="flex items-center gap-2.5 sm:gap-4">
-            {/* Active Pro Status Pill */}
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-              title="Your full clinical membership is active"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="hidden xs:inline">Pro Active</span>
-            </div>
+            {/* Pro Status Pill - only shown when user actually has an active subscription */}
+            {isActive && (
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                title="Your full clinical membership is active"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="hidden xs:inline">Pro Active</span>
+              </div>
+            )}
 
             {/* Admin link if user is admin */}
             {isAdmin && (
@@ -1096,33 +1122,24 @@ export function DashboardPage() {
               </p>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
               <button
                 type="button"
                 onClick={handleQuickStandardExam}
-                className="inline-flex items-center justify-center gap-2 bg-primary text-on-primary px-5 py-3 text-sm font-bold rounded-xl hover:opacity-95 shadow-xs motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="inline-flex items-center justify-center gap-2 bg-primary text-on-primary px-6 py-3 text-sm font-bold rounded-xl hover:opacity-95 shadow-xs motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <PlayIcon className="w-4 h-4" />
-                <span>Quick Start CBT Exam (20 Qs)</span>
+                <span>Start Practice Exam (20 Qs)</span>
               </button>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleOpenSetup()}
-                  className="flex-1 inline-flex items-center justify-center gap-2 border border-border hover:border-accent bg-bg text-text px-4 py-3 text-sm font-bold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <SettingsSlidersIcon className="w-4 h-4 text-accent" />
-                  <span>Customize Practice</span>
-                </button>
-                <Link
-                  to="/app/flashcards"
-                  className="inline-flex items-center justify-center gap-1.5 border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 px-4 py-3 text-sm font-bold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary whitespace-nowrap"
-                  title="Practice clinical flashcards active recall"
-                >
-                  <span>🗂️ Flashcards</span>
-                </Link>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenSetup()}
+                className="inline-flex items-center justify-center gap-2 border border-border hover:border-accent bg-bg text-text px-4 py-3 text-sm font-bold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <SettingsSlidersIcon className="w-4 h-4 text-accent" />
+                <span>Custom Drill</span>
+              </button>
             </div>
           </div>
         </section>
@@ -1378,30 +1395,15 @@ export function DashboardPage() {
                     })()}
                   </div>
 
-                  {/* Actions */}
-                  <div className="pt-2 flex items-center gap-2">
+                  {/* Action */}
+                  <div className="pt-2">
                     <button
                       type="button"
                       onClick={() => handleOpenSetup(course.id)}
-                      className="flex-1 bg-primary text-on-primary py-2.5 px-3 text-xs sm:text-sm font-bold rounded-xl hover:opacity-95 shadow-xs motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center gap-1.5"
+                      className="w-full bg-primary text-on-primary py-2.5 px-3 text-xs sm:text-sm font-bold rounded-xl hover:opacity-95 shadow-xs motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center gap-1.5"
                     >
                       <span>Practice Course</span>
                       <ArrowRightIcon className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleStartSession({
-                          courseId: course.id,
-                          topicId: 'all',
-                          mode: 'timed',
-                          questionCount: 10,
-                        })
-                      }}
-                      title="Launch quick 10-question drill"
-                      className="border border-border hover:border-accent bg-bg text-text py-2.5 px-3 text-xs font-bold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98]"
-                    >
-                      10 Qs
                     </button>
                   </div>
                 </div>

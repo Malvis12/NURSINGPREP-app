@@ -82,7 +82,7 @@ function clearStoredExam(): void {
 
 export function ExamPage() {
   const navigate = useNavigate()
-  const { refreshProfile } = useAuth()
+  const { user, refreshProfile } = useAuth()
 
   // Exam phase
   const [phase, setPhase] = useState<ExamPhase>('start')
@@ -264,22 +264,25 @@ export function ExamPage() {
 
       // Save completed attempt locally as immediate fallback for instant dashboard reflection
       try {
-        const existingHistory = JSON.parse(localStorage.getItem('nursingprep_session_history_v2') || '[]')
-        const calculatedPercentage = data.total > 0 ? Math.round((data.score / data.total) * 100) : 0
-        const newRecord = {
-          id: effectiveAttemptId || `attempt-${Date.now()}`,
-          courseTitle: 'Nursing CBT Practice',
-          courseId: 'general',
-          topicTitle: `Practice Drill (${data.total} Qs)`,
-          date: 'Just now',
-          score: data.score,
-          total: data.total,
-          percentage: calculatedPercentage,
-          mode: 'timed',
-          difficulty: 'medium',
-          status: calculatedPercentage >= 75 ? 'passed' : 'review',
+        if (user?.id) {
+          const userStorageKey = `nursingprep_session_history_${user.id}`
+          const existingHistory = JSON.parse(localStorage.getItem(userStorageKey) || '[]')
+          const calculatedPercentage = data.total > 0 ? Math.round((data.score / data.total) * 100) : 0
+          const newRecord = {
+            id: effectiveAttemptId || `attempt-${Date.now()}`,
+            courseTitle: 'Nursing CBT Practice',
+            courseId: 'general',
+            topicTitle: `Practice Drill (${data.total} Qs)`,
+            date: 'Just now',
+            score: data.score,
+            total: data.total,
+            percentage: calculatedPercentage,
+            mode: 'timed',
+            difficulty: 'medium',
+            status: calculatedPercentage >= 75 ? 'passed' : 'review',
+          }
+          localStorage.setItem(userStorageKey, JSON.stringify([newRecord, ...existingHistory.slice(0, 9)]))
         }
-        localStorage.setItem('nursingprep_session_history_v2', JSON.stringify([newRecord, ...existingHistory.slice(0, 9)]))
       } catch {
         // Ignore localStorage error
       }

@@ -132,6 +132,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Best-effort cleanup
     }
+    // Clean up all user-scoped caches and exam session items to prevent cross-account data leakage
+    try {
+      localStorage.removeItem('nursingprep_session_history_v2')
+      sessionStorage.removeItem('nursingprep_exam_attempt_id')
+      sessionStorage.removeItem('nursingprep_exam_answers')
+      sessionStorage.removeItem('nursingprep_pro_banner_dismissed')
+    } catch {
+      // Ignore storage cleanup errors
+    }
+
     await supabase.auth.signOut()
     setUser(null)
     setLevel(null)
