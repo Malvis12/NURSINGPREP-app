@@ -19,6 +19,7 @@ const PayReturnPage = lazy(() => import('./pages/PayReturnPage').then((m) => ({ 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const ExamPage = lazy(() => import('./pages/ExamPage').then((m) => ({ default: m.ExamPage })))
 const FlashcardsPage = lazy(() => import('./pages/FlashcardsPage').then((m) => ({ default: m.FlashcardsPage })))
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
 const LockedAccountPage = lazy(() => import('./pages/LockedAccountPage').then((m) => ({ default: m.LockedAccountPage })))
 
 // Lazy-loaded admin routes
@@ -101,6 +102,14 @@ export default function App() {
                   element={
                     <ProtectedRoute requireLevel requireActive>
                       <FlashcardsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/app/profile"
+                  element={
+                    <ProtectedRoute requireLevel>
+                      <ProfilePage />
                     </ProtectedRoute>
                   }
                 />

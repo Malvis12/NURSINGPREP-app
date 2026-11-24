@@ -882,6 +882,32 @@ export function ExamPage() {
             </div>
           </div>
 
+          {/* Action buttons & Free Trial Completion Banner */}
+          {!isActive && (
+            <div className="border border-primary/30 bg-primary/10 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🎉</span>
+                  <span className="font-extrabold text-sm text-text">Free Trial Exam Completed!</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                    Results Unlocked
+                  </span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">
+                  Review all your solutions and clinical rationales below. To practice more courses, full mock exams, and custom drills, activate Pro membership for ₦1,050.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/pay')}
+                className="bg-primary text-on-primary px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl hover:opacity-95 shrink-0 transition flex items-center gap-1.5 shadow-sm"
+              >
+                <span>Upgrade to Pro (₦1,050)</span>
+                <span className="text-xs">→</span>
+              </button>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex flex-wrap gap-3">
             {isActive ? (

@@ -980,6 +980,16 @@ export function DashboardPage() {
             {/* Light/Dark Mode Switcher */}
             <ThemeToggle />
 
+            {/* Compact Profile Link */}
+            <Link
+              to="/app/profile"
+              aria-label="Profile and Settings"
+              className="border border-border hover:border-accent bg-surface text-text px-3 py-1.5 text-xs font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] inline-flex items-center gap-1.5"
+            >
+              <span>👤</span>
+              <span className="hidden sm:inline">Profile</span>
+            </Link>
+
             {/* Compact Sign Out Button */}
             <button
               type="button"
@@ -1588,6 +1598,14 @@ export function DashboardPage() {
           >
             <span className="text-base">🗂️</span>
             <span>Flashcards</span>
+          </Link>
+
+          <Link
+            to="/app/profile"
+            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
+          >
+            <span className="text-base">👤</span>
+            <span>Profile</span>
           </Link>
         </div>
       </nav>
