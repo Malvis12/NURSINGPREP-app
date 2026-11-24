@@ -9,7 +9,9 @@ export interface OverviewData {
   verified_revenue: number | string
   access_revenue?: number | string
   unlock_revenue?: number | string
-  question_bank: {
+  total_approved_questions?: number
+  questions_by_level?: Record<string, number>
+  question_bank?: {
     total_approved: number
     by_level?: Record<string, number>
   }
@@ -232,28 +234,41 @@ export function AdminOverviewPage() {
           </div>
 
           {/* Card 3: Question Bank */}
-          <div className="border border-border bg-surface p-6 rounded-2xl space-y-2 flex flex-col justify-between shadow-xs">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted">
-              Question Bank
-            </span>
-            <div className="text-3xl font-extrabold tracking-tight">
-              {(data.question_bank?.total_approved ?? 0).toLocaleString()}
-            </div>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                {data.question_bank?.total_approved ?? 0} approved
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
-                200L: {data.question_bank?.by_level?.['200'] ?? 0}
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
-                300L: {data.question_bank?.by_level?.['300'] ?? 0}
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
-                400L: {data.question_bank?.by_level?.['400'] ?? 0}
-              </span>
-            </div>
-          </div>
+          {(() => {
+            const approvedCount =
+              data.total_approved_questions ??
+              data.question_bank?.total_approved ??
+              0
+            const byLevel =
+              data.questions_by_level ||
+              data.question_bank?.by_level ||
+              {}
+
+            return (
+              <div className="border border-border bg-surface p-6 rounded-2xl space-y-2 flex flex-col justify-between shadow-xs">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Question Bank
+                </span>
+                <div className="text-3xl font-extrabold tracking-tight">
+                  {approvedCount.toLocaleString()}
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                    {approvedCount} approved
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
+                    200L: {byLevel['200'] ?? 0}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
+                    300L: {byLevel['300'] ?? 0}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
+                    400L: {byLevel['400'] ?? 0}
+                  </span>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Card 4: Completed Exams */}
           <div className="border border-border bg-surface p-6 rounded-2xl space-y-2 flex flex-col justify-between shadow-xs">
