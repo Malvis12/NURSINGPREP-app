@@ -91,6 +91,82 @@ export function AdminQuestionsPage() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Live parsed preview for first 3 questions in Bulk Import modal
+  const previewQuestions = useMemo(() => {
+    if (!bulkInput.trim()) return []
+    try {
+      if (bulkFormat === 'json') {
+        const parsed = JSON.parse(bulkInput)
+        if (Array.isArray(parsed)) {
+          return parsed.slice(0, 3).map((item) => ({
+            stem: item.question_text || item.question || '',
+            optA: item.option_a || item.a || '',
+            optB: item.option_b || item.b || '',
+            optC: item.option_c || item.c || '',
+            optD: item.option_d || item.d || '',
+            ans: (item.correct_answer || item.answer || 'A').toUpperCase(),
+          }))
+        }
+      } else {
+        // Quick split for preview
+        const lines = bulkInput
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean)
+        const sampleLines = lines.slice(0, 6)
+        const parsedRows: any[] = []
+
+        // Advanced CSV line splitter respecting quotes
+        const splitLine = (line: string): string[] => {
+          const res: string[] = []
+          let cur = ''
+          let inQuotes = false
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i]
+            if (char === '"') {
+              inQuotes = !inQuotes
+            } else if (char === ',' && !inQuotes) {
+              res.push(cur.trim())
+              cur = ''
+            } else {
+              cur += char
+            }
+          }
+          res.push(cur.trim())
+          return res.map((s) => s.replace(/^"|"$/g, '').trim())
+        }
+
+        for (const line of sampleLines) {
+          const parts = splitLine(line)
+          if (parts.length < 5) continue
+          // Skip header row if present
+          if (
+            parts[0].toLowerCase().includes('item_no') ||
+            parts[0].toLowerCase().includes('question') ||
+            parts[1]?.toLowerCase().includes('question')
+          ) {
+            continue
+          }
+          const hasItemNo = /^\d+$/.test(parts[0])
+          const offset = hasItemNo ? 1 : 0
+          parsedRows.push({
+            stem: parts[offset] || '',
+            optA: parts[offset + 1] || '',
+            optB: parts[offset + 2] || '',
+            optC: parts[offset + 3] || '',
+            optD: parts[offset + 4] || '',
+            ans: (parts[offset + 5] || 'A').toUpperCase(),
+          })
+          if (parsedRows.length >= 3) break
+        }
+        return parsedRows
+      }
+    } catch {
+      return []
+    }
+    return []
+  }, [bulkInput, bulkFormat])
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -561,21 +637,44 @@ export function AdminQuestionsPage() {
       if (bulkFormat === 'json') {
         const parsed = JSON.parse(bulkInput)
         if (!Array.isArray(parsed)) throw new Error('JSON must be an array of questions.')
-        rowsToInsert = parsed.map((item) => ({
-          course_id: item.course_id || bulkCourseId,
-          topic: item.topic || 'General Practice',
-          difficulty: ['easy', 'medium', 'hard'].includes(item.difficulty) ? item.difficulty : 'medium',
-          question_text: item.question_text || item.question,
-          option_a: item.option_a || item.a,
-          option_b: item.option_b || item.b,
-          option_c: item.option_c || item.c,
-          option_d: item.option_d || item.d,
-          correct_answer: (item.correct_answer || item.answer || 'A').toUpperCase(),
-          explanation: item.explanation || item.rationale || '',
-          status: 'approved',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }))
+        rowsToInsert = parsed.map((item, idx) => {
+          const stem = item.question_text || item.question || ''
+          const optA = item.option_a || item.a || ''
+          const optB = item.option_b || item.b || ''
+          const optC = item.option_c || item.c || ''
+          const optD = item.option_d || item.d || ''
+
+          // Anomaly checks
+          const opts = [
+            { label: 'Option A', val: optA },
+            { label: 'Option B', val: optB },
+            { label: 'Option C', val: optC },
+            { label: 'Option D', val: optD },
+          ]
+          for (const opt of opts) {
+            if (opt.val.trim().endsWith('?') || (opt.val.includes('?') && opt.val.length > 30)) {
+              throw new Error(
+                `🚨 Corrupted item detected at Question #${idx + 1}: ${opt.label} contains a question ("${opt.val.slice(0, 35)}..."). Please check your JSON format.`
+              )
+            }
+          }
+
+          return {
+            course_id: item.course_id || bulkCourseId,
+            topic: item.topic || 'General Practice',
+            difficulty: ['easy', 'medium', 'hard'].includes(item.difficulty) ? item.difficulty : 'medium',
+            question_text: stem.trim(),
+            option_a: optA.trim(),
+            option_b: optB.trim(),
+            option_c: optC.trim(),
+            option_d: optD.trim(),
+            correct_answer: (item.correct_answer || item.answer || 'A').toUpperCase(),
+            explanation: item.explanation || item.rationale || '',
+            status: 'approved',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        })
       } else {
         // Advanced RFC-4180 compliant CSV parser: handles quoted fields with internal commas, double quotes, and newlines
         const parseCSVRows = (text: string): string[][] => {
@@ -652,7 +751,7 @@ export function AdminQuestionsPage() {
           dataRows = rawParsedRows
         }
 
-        for (const parts of dataRows) {
+        for (const [idx, parts] of dataRows.entries()) {
           if (parts.length < 5) continue
 
           let question_text = ''
@@ -704,6 +803,35 @@ export function AdminQuestionsPage() {
           }
 
           if (!question_text.trim()) continue
+
+          // ------------------------------------------------------------------
+          // IMPORTER ANOMALY DETECTOR (PREVENTS COMMA-SHIFTING BUGS)
+          // ------------------------------------------------------------------
+          const rowNum = idx + 1
+          const opts = [
+            { label: 'Option A', val: option_a },
+            { label: 'Option B', val: option_b },
+            { label: 'Option C', val: option_c },
+            { label: 'Option D', val: option_d },
+          ]
+
+          // 1. Detect if an option ends in a question mark or contains questions
+          for (const opt of opts) {
+            if (opt.val.trim().endsWith('?') || (opt.val.includes('?') && opt.val.length > 30)) {
+              throw new Error(
+                `🚨 Corrupted row detected at Question #${rowNum}: ${opt.label} ends with a question mark ("${opt.val.slice(0, 40)}..."). Your CSV columns shifted due to unquoted commas! Please wrap text cells in double quotes.`
+              )
+            }
+          }
+
+          // 2. Detect unclosed opening parentheses in question stem
+          const openParens = (question_text.match(/\(/g) || []).length
+          const closeParens = (question_text.match(/\)/g) || []).length
+          if (openParens > closeParens && (option_c.includes(')') || option_d.includes(')'))) {
+            throw new Error(
+              `🚨 Column shift detected at Question #${rowNum}: The question stem has unclosed parenthesis ("${question_text.slice(-25)}"), and the closing parenthesis landed in the options. Wrap fields in quotes to import cleanly.`
+            )
+          }
 
           const cleanCorrect = (correct_answer || 'A').toUpperCase().trim()
           const validCorrect = ['A', 'B', 'C', 'D'].includes(cleanCorrect) ? cleanCorrect : 'A'
@@ -1327,6 +1455,60 @@ export function AdminQuestionsPage() {
                     onChange={(e) => setBulkInput(e.target.value)}
                     className="w-full bg-bg border border-border rounded-xl p-3 font-mono text-xs text-text focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+
+                  {/* LIVE PREVIEW TABLE (3 ROWS) */}
+                  {previewQuestions.length > 0 && (
+                    <div className="mt-4 space-y-2 border border-border bg-bg/50 p-3.5 rounded-2xl">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-accent flex items-center gap-1.5">
+                          <span>👁️ Live Column Verification Preview</span>
+                          <span className="text-muted font-normal">(First {previewQuestions.length} parsed items)</span>
+                        </span>
+                        <span className="text-[10px] text-muted">
+                          Verify that question stems and options are in their proper columns
+                        </span>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-border bg-bg text-muted font-bold">
+                              <th className="py-2 px-2.5 w-1/3">Question Stem</th>
+                              <th className="py-2 px-2">Opt A</th>
+                              <th className="py-2 px-2">Opt B</th>
+                              <th className="py-2 px-2">Opt C</th>
+                              <th className="py-2 px-2">Opt D</th>
+                              <th className="py-2 px-2 text-center">Ans</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/60">
+                            {previewQuestions.map((q, i) => (
+                              <tr key={i} className="hover:bg-bg/40 font-medium">
+                                <td className="py-2 px-2.5 font-bold text-text max-w-[200px] truncate" title={q.stem}>
+                                  {q.stem}
+                                </td>
+                                <td className={`py-2 px-2 max-w-[100px] truncate ${q.ans === 'A' ? 'text-emerald-400 font-bold' : 'text-muted'}`} title={q.optA}>
+                                  {q.optA}
+                                </td>
+                                <td className={`py-2 px-2 max-w-[100px] truncate ${q.ans === 'B' ? 'text-emerald-400 font-bold' : 'text-muted'}`} title={q.optB}>
+                                  {q.optB}
+                                </td>
+                                <td className={`py-2 px-2 max-w-[100px] truncate ${q.ans === 'C' ? 'text-emerald-400 font-bold' : 'text-muted'}`} title={q.optC}>
+                                  {q.optC}
+                                </td>
+                                <td className={`py-2 px-2 max-w-[100px] truncate ${q.ans === 'D' ? 'text-emerald-400 font-bold' : 'text-muted'}`} title={q.optD}>
+                                  {q.optD}
+                                </td>
+                                <td className="py-2 px-2 text-center font-black text-accent">
+                                  {q.ans}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-3 border-t border-border flex items-center justify-end gap-2.5">
