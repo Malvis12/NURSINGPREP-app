@@ -93,6 +93,7 @@ export function OnboardingPage() {
               onChange={(e) => setLevel(e.target.value)}
               className="w-full border border-border bg-bg text-text rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent"
             >
+              <option value="100">100 Level</option>
               <option value="200">200 Level</option>
               <option value="300">300 Level</option>
               <option value="400">400 Level</option>

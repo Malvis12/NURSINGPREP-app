@@ -220,8 +220,9 @@ export function ProfilePage() {
               <label className="text-xs font-bold uppercase tracking-wider text-muted block">
                 Academic Cohort Level (Curriculum Filter)
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
+                  { lvl: 100, name: 'Level 100', desc: 'Pre-Clinical & General Studies' },
                   { lvl: 200, name: 'Level 200', desc: 'Foundations & Anatomy' },
                   { lvl: 300, name: 'Level 300', desc: 'Med-Surg & Pharmacology' },
                   { lvl: 400, name: 'Level 400', desc: 'Maternal Health & Community' },

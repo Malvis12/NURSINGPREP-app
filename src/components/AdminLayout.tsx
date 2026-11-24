@@ -10,6 +10,7 @@ import { ThemeToggle } from './ThemeToggle'
 const ADMIN_NAV_ITEMS = [
   { name: 'Overview', path: '/admin', end: true, icon: '◈' },
   { name: 'Questions', path: '/admin/questions', end: false, icon: '☷' },
+  { name: 'Timetable', path: '/admin/timetable', end: false, icon: '📅' },
   { name: 'Students', path: '/admin/students', end: false, icon: '👥' },
   { name: 'Payments', path: '/admin/payments', end: false, icon: '💳' },
 ] as const

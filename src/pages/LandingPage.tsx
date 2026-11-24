@@ -99,7 +99,7 @@ export function LandingPage() {
             Structured exam preparation for nursing students.
           </h1>
           <p className="text-base sm:text-lg text-muted leading-relaxed max-w-2xl mx-auto">
-            A curriculum-aligned practice platform featuring timed CBT sessions, clinical active recall decks, and verified rationales mapped to 200L, 300L, and 400L course specifications.
+            A curriculum-aligned practice platform featuring timed CBT sessions, exam timetable spotlights, and verified rationales mapped to 100L, 200L, 300L, and 400L course specifications.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <button
@@ -107,7 +107,7 @@ export function LandingPage() {
               onClick={() => navigate('/signup')}
               className="w-full sm:w-auto bg-primary text-on-primary px-7 py-3 text-sm font-semibold rounded-xl transition hover:opacity-95 active:scale-[0.98]"
             >
-              Start 1 Free Practice Exam
+              Start 25-Question Free Trial
             </button>
             <button
               type="button"
@@ -118,7 +118,7 @@ export function LandingPage() {
             </button>
           </div>
           <p className="text-xs text-muted max-w-md mx-auto">
-            Includes 1 full complimentary CBT simulation drill on any course of your choice upon registration.
+            Includes 1 complimentary 25-question CBT simulation drill targeted to your next upcoming exam upon registration.
           </p>
         </section>
 
@@ -132,7 +132,15 @@ export function LandingPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              <div className="border border-border/80 bg-bg p-5 rounded-xl space-y-2">
+                <span className="text-[11px] font-bold text-accent uppercase tracking-wider">Level 100 Foundational</span>
+                <p className="text-sm font-bold">Pre-Clinical &amp; General Studies</p>
+                <p className="text-xs text-muted leading-relaxed">
+                  Introductory sciences, entrepreneurial studies, and foundational academic coursework.
+                </p>
+              </div>
+
               <div className="border border-border/80 bg-bg p-5 rounded-xl space-y-2">
                 <span className="text-[11px] font-bold text-accent uppercase tracking-wider">Level 200 Core</span>
                 <p className="text-sm font-bold">Foundations &amp; Anatomy</p>
@@ -177,30 +185,54 @@ export function LandingPage() {
             </div>
 
             <div className="border border-border bg-surface p-6 rounded-2xl space-y-2.5">
-              <span className="text-xs font-bold text-accent">02. Active Recall</span>
-              <h3 className="text-base font-bold">Clinical Flashcard Decks</h3>
+              <span className="text-xs font-bold text-accent">02. Timetable &amp; Tutor Mode</span>
+              <h3 className="text-base font-bold">Next-Paper Spotlight</h3>
               <p className="text-xs text-muted leading-relaxed">
-                Card-flip recall sessions categorized by course topics to reinforce critical nursing interventions and diagnostic criteria.
+                Automatic exam timetable tracking highlights your next upcoming paper and lets you drill with instant rationales in Tutor Mode.
               </p>
             </div>
 
             <div className="border border-border bg-surface p-6 rounded-2xl space-y-2.5">
               <span className="text-xs font-bold text-accent">03. Performance Review</span>
-              <h3 className="text-base font-bold">Explanations &amp; Rationales</h3>
+              <h3 className="text-base font-bold">Session History &amp; Rationales</h3>
               <p className="text-xs text-muted leading-relaxed">
-                Post-test breakdowns with question-by-question physiological rationales explaining correct choices and clinical distractors.
+                Click any completed session to inspect question-by-question answers, clinical rationales, and retake drills.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Academic Integrity & Account Security */}
-        <section className="border border-border bg-surface p-8 rounded-2xl">
-          <div className="max-w-2xl space-y-2">
-            <h3 className="text-base font-bold">Academic Session &amp; Integrity Controls</h3>
-            <p className="text-xs text-muted leading-relaxed">
-              Student accounts are protected by multi-device concurrency controls and active session verification to maintain examination integrity and prevent unauthorized credential sharing.
-            </p>
+        {/* Academic Integrity & Account Security + Pronounced WhatsApp Support */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="border border-border bg-surface p-8 rounded-2xl flex flex-col justify-between space-y-3">
+            <div className="space-y-2">
+              <h3 className="text-base font-bold">Academic Session &amp; Integrity Controls</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Student accounts are protected by multi-device concurrency controls and active session verification to maintain examination integrity and prevent unauthorized credential sharing.
+              </p>
+            </div>
+          </div>
+
+          <div className="border border-emerald-500/30 bg-emerald-500/10 p-8 rounded-2xl flex flex-col justify-between space-y-4">
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-500">
+                24/7 Student Helpdesk
+              </span>
+              <h3 className="text-lg font-extrabold text-text">Need help with your account or payment?</h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Chat directly with our support team on WhatsApp for fast assistance with registration, level switching, or payment confirmation.
+              </p>
+            </div>
+            <div>
+              <a
+                href="https://wa.me/2348103128721?text=Hello%20NursingPrep%20Support%2C%20I%20need%20assistance%20with%20my%20account."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 text-sm font-bold rounded-xl shadow-sm transition active:scale-[0.98]"
+              >
+                <span>💬 Contact Support on WhatsApp</span>
+              </a>
+            </div>
           </div>
         </section>
       </main>

@@ -28,6 +28,7 @@ const AdminOverviewPage = lazy(() => import('./pages/AdminOverviewPage').then((m
 const AdminStudentsPage = lazy(() => import('./pages/AdminStudentsPage').then((m) => ({ default: m.AdminStudentsPage })))
 const AdminQuestionsPage = lazy(() => import('./pages/AdminQuestionsPage').then((m) => ({ default: m.AdminQuestionsPage })))
 const AdminPaymentsPage = lazy(() => import('./pages/AdminPaymentsPage').then((m) => ({ default: m.AdminPaymentsPage })))
+const AdminTimetablePage = lazy(() => import('./pages/AdminTimetablePage').then((m) => ({ default: m.AdminTimetablePage })))
 
 function RouteLoading() {
   return (
@@ -125,6 +126,7 @@ export default function App() {
                   <Route path="overview" element={<Navigate to="/admin" replace />} />
                   <Route path="students" element={<AdminStudentsPage />} />
                   <Route path="questions" element={<AdminQuestionsPage />} />
+                  <Route path="timetable" element={<AdminTimetablePage />} />
                   <Route path="payments" element={<AdminPaymentsPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />

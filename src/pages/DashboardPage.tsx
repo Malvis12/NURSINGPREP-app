@@ -354,9 +354,9 @@ export function DashboardPage() {
   const location = useLocation()
   const { user, level: authLevel, isActive, isAdmin, canTakeExam, submittedAttemptsCount, signOut } = useAuth()
 
-  // 1. Level determination: default to user's auth level (200, 300, 400) or fallback to 300
+  // 1. Level determination: default to user's auth level (100, 200, 300, 400) or fallback to 300
   const studentLevel = useMemo(() => {
-    return authLevel && [200, 300, 400].includes(authLevel) ? authLevel : 300
+    return authLevel && [100, 200, 300, 400].includes(authLevel) ? authLevel : 300
   }, [authLevel])
 
   // 2. Celebratory Pro Banner state: checks query param (?payment_success=true or ?unlocked=true) or state
@@ -525,6 +525,70 @@ export function DashboardPage() {
   // 4. Practice Setup Modal / Drawer State
   const [isSetupOpen, setIsSetupOpen] = useState(false)
   const [isCourseLocked, setIsCourseLocked] = useState(false)
+
+  // 4b. Upcoming Timetable Spotlight (Fetched strictly for studentLevel)
+  const [upcomingExams, setUpcomingExams] = useState<Array<{
+    id: string
+    course_id: string
+    course_code: string
+    course_title: string
+    level_code: string
+    exam_date: string
+    paper_title: string
+    venue: string
+  }>>([])
+
+  useEffect(() => {
+    let active = true
+    async function fetchUpcoming() {
+      try {
+        const { data, error } = await supabase.rpc('get_student_upcoming_exams')
+        if (!error && Array.isArray(data) && active) {
+          setUpcomingExams(data)
+        }
+      } catch (err) {
+        console.warn('[Dashboard] Could not fetch upcoming timetable:', err)
+      }
+    }
+    void fetchUpcoming()
+    return () => {
+      active = false
+    }
+  }, [studentLevel])
+
+  const nextUpcomingExam = upcomingExams[0] || null
+
+  // 4c. Review Session Drawer / Modal State
+  const [selectedSessionForReview, setSelectedSessionForReview] = useState<PracticeSessionRecord | null>(null)
+  const [sessionReviewLoading, setSessionReviewLoading] = useState(false)
+  const [sessionReviewQuestions, setSessionReviewQuestions] = useState<any[]>([])
+
+  const handleOpenSessionReview = async (sess: PracticeSessionRecord) => {
+    setSelectedSessionForReview(sess)
+    // Check if sess.id is a real database attempt UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sess.id)
+    if (!isUuid) {
+      setSessionReviewQuestions([])
+      return
+    }
+
+    setSessionReviewLoading(true)
+    try {
+      const { data, error } = await supabase.rpc('get_attempt_result', {
+        p_attempt_id: sess.id,
+      })
+      if (!error && data && Array.isArray(data.results)) {
+        setSessionReviewQuestions(data.results)
+      } else {
+        setSessionReviewQuestions([])
+      }
+    } catch (err) {
+      console.warn('[Dashboard] Error fetching session details:', err)
+      setSessionReviewQuestions([])
+    } finally {
+      setSessionReviewLoading(false)
+    }
+  }
 
   // Available courses strictly for student's registered level
   const availableLevelCourses = useMemo(() => {
@@ -895,14 +959,25 @@ export function DashboardPage() {
     })
   }
 
-  // Quick launch default standard CBT exam
+  // Quick launch default standard CBT exam or targeted next-exam free trial
   const handleQuickStandardExam = () => {
-    const defaultCourse = availableLevelCourses[0] || activeCourseList[0]
+    // If not active (free trial), target the next upcoming exam on their timetable if scheduled!
+    let targetCourse = availableLevelCourses[0] || activeCourseList[0]
+
+    if (!isActive && nextUpcomingExam) {
+      const timetableCourse = activeCourseList.find(
+        (c) => c.id === nextUpcomingExam.course_id || c.code === nextUpcomingExam.course_code
+      )
+      if (timetableCourse) {
+        targetCourse = timetableCourse
+      }
+    }
+
     handleStartSession({
-      courseId: defaultCourse?.id || 'med-surg',
+      courseId: targetCourse?.id || 'med-surg',
       topicId: 'all',
       mode: 'timed',
-      questionCount: 20,
+      questionCount: isActive ? 20 : 25,
     })
   }
 
@@ -921,17 +996,30 @@ export function DashboardPage() {
     return activeCourseList.find((c) => c.id === setupConfig.courseId) || activeCourseList[0] || NURSING_COURSES[0]
   }, [activeCourseList, setupConfig.courseId])
 
-  // Filtered courses based on tab - strictly prioritizes student's level
+  // Filtered courses based on tab - strictly prioritizes student's level, pinning next upcoming exam if present
   const filteredCourses = useMemo(() => {
+    let baseList: CourseItem[] = []
     if (courseFilter === 'high_yield') {
-      return activeCourseList.filter((c) => c.levels.includes(studentLevel) && c.isHighYield)
+      baseList = activeCourseList.filter((c) => c.levels.includes(studentLevel) && c.isHighYield)
+    } else if (courseFilter === 'all') {
+      baseList = activeCourseList
+    } else {
+      // Default & primary view: strictly show courses for the student's level
+      baseList = activeCourseList.filter((c) => c.levels.includes(studentLevel))
     }
-    if (courseFilter === 'all') {
-      return activeCourseList
+
+    // If an upcoming exam is scheduled on timetable, pin it subtly to the top (#1 spot)
+    if (nextUpcomingExam && courseFilter === 'my_level') {
+      const idx = baseList.findIndex((c) => c.id === nextUpcomingExam.course_id || c.code === nextUpcomingExam.course_code)
+      if (idx > 0) {
+        const pinned = baseList[idx]
+        const remaining = baseList.filter((_, i) => i !== idx)
+        return [pinned, ...remaining]
+      }
     }
-    // Default & primary view: strictly show courses for the student's level
-    return activeCourseList.filter((c) => c.levels.includes(studentLevel))
-  }, [activeCourseList, courseFilter, studentLevel])
+
+    return baseList
+  }, [activeCourseList, courseFilter, studentLevel, nextUpcomingExam])
 
   // Stats calculation
   const totalAnswered = useMemo(() => {
@@ -1151,6 +1239,39 @@ export function DashboardPage() {
               <p className="text-sm sm:text-base text-muted leading-relaxed">
                 Step into today's clinical drill. Sharpen your clinical reasoning with timed CBT exam blocks or targeted high-yield course practice.
               </p>
+
+              {/* Minimal Next Exam Spotlight Pill (Only shown if an upcoming exam exists) */}
+              {nextUpcomingExam && (
+                <div className="pt-2">
+                  <div className="inline-flex flex-wrap items-center gap-2 p-2 px-3 rounded-xl bg-accent/10 border border-accent/20 text-xs">
+                    <span className="font-black text-accent uppercase tracking-wider text-[10px]">
+                      ⏰ Next Exam:
+                    </span>
+                    <strong className="text-text font-bold">
+                      {nextUpcomingExam.course_code}
+                    </strong>
+                    <span className="text-muted">•</span>
+                    <span className="text-muted">
+                      {new Date(nextUpcomingExam.exam_date).toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(nextUpcomingExam.exam_date).toLocaleTimeString(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSetup(nextUpcomingExam.course_id)}
+                      className="ml-auto text-[11px] font-bold text-accent hover:underline inline-flex items-center gap-0.5"
+                    >
+                      <span>Drill Course</span>
+                      <span>→</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -1161,7 +1282,13 @@ export function DashboardPage() {
                 className="inline-flex items-center justify-center gap-2 bg-primary text-on-primary px-6 py-3 text-sm font-bold rounded-xl hover:opacity-95 shadow-xs motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <PlayIcon className="w-4 h-4" />
-                <span>Start Practice Exam (20 Qs)</span>
+                <span>
+                  {!isActive && nextUpcomingExam
+                    ? `Start Free Trial: ${nextUpcomingExam.course_code} (25 Qs)`
+                    : !isActive
+                    ? 'Start Free Trial Exam (25 Qs)'
+                    : 'Start Practice Exam (20 Qs)'}
+                </span>
               </button>
               <button
                 type="button"
@@ -1354,6 +1481,11 @@ export function DashboardPage() {
 
                       {/* Level Badges */}
                       <div className="flex items-center gap-1">
+                        {nextUpcomingExam && (nextUpcomingExam.course_id === course.id || nextUpcomingExam.course_code === course.code) && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-accent text-on-accent animate-pulse">
+                            Next Paper
+                          </span>
+                        )}
                         {course.isHighYield && (
                           <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
                             High Yield
@@ -1484,9 +1616,17 @@ export function DashboardPage() {
                   const isPassing = sess.percentage >= 70
 
                   return (
-                    <tr key={sess.id} className="hover:bg-bg/40 motion-safe:transition-colors">
+                    <tr
+                      key={sess.id}
+                      onClick={() => handleOpenSessionReview(sess)}
+                      className="hover:bg-bg/60 cursor-pointer motion-safe:transition-colors group"
+                      title="Click to view detailed score breakdown and solution review"
+                    >
                       <td className="py-4 px-4 sm:px-6">
-                        <div className="font-bold text-text">{sess.courseTitle}</div>
+                        <div className="font-bold text-text group-hover:text-accent transition-colors flex items-center gap-1.5">
+                          <span>{sess.courseTitle}</span>
+                          <span className="text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">👁️ Review</span>
+                        </div>
                         <div className="text-xs text-muted">{sess.topicTitle}</div>
                       </td>
                       <td className="py-4 px-4 text-xs text-muted whitespace-nowrap">
@@ -1513,7 +1653,7 @@ export function DashboardPage() {
                           {sess.percentage}%
                         </span>
                       </td>
-                      <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap">
+                      <td className="py-4 px-4 sm:px-6 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => handleRetakeSession(sess)}
@@ -1537,10 +1677,17 @@ export function DashboardPage() {
               const isPassing = sess.percentage >= 70
 
               return (
-                <div key={sess.id} className="border border-border bg-surface p-4 rounded-xl space-y-3 shadow-xs">
+                <div
+                  key={sess.id}
+                  onClick={() => handleOpenSessionReview(sess)}
+                  className="border border-border bg-surface p-4 rounded-xl space-y-3 shadow-xs hover:border-accent/50 cursor-pointer transition-colors"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="font-bold text-sm text-text">{sess.courseTitle}</h3>
+                      <h3 className="font-bold text-sm text-text flex items-center gap-1.5">
+                        <span>{sess.courseTitle}</span>
+                        <span className="text-[10px] text-accent">👁️</span>
+                      </h3>
                       <p className="text-xs text-muted">{sess.topicTitle}</p>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
@@ -1558,13 +1705,22 @@ export function DashboardPage() {
                     <span className="font-bold text-text">{sess.score}/{sess.total} Qs</span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleRetakeSession(sess)}
-                    className="w-full py-2 bg-bg border border-border hover:border-accent text-xs font-bold rounded-lg text-center motion-safe:transition-colors"
-                  >
-                    Retake Session
-                  </button>
+                  <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSessionReview(sess)}
+                      className="flex-1 py-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg text-center motion-safe:transition-colors"
+                    >
+                      View Review
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRetakeSession(sess)}
+                      className="flex-1 py-2 bg-bg border border-border hover:border-accent text-xs font-bold rounded-lg text-center motion-safe:transition-colors"
+                    >
+                      Retake
+                    </button>
+                  </div>
                 </div>
               )
             })}
@@ -1890,6 +2046,200 @@ export function DashboardPage() {
                   className="w-full sm:w-auto border border-border hover:border-accent bg-bg text-text py-3.5 px-5 text-sm font-bold rounded-xl motion-safe:transition-all"
                 >
                   Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ==================================================================== */}
+      {/* 6. PAST PRACTICE SESSION REVIEW MODAL */}
+      {/* ==================================================================== */}
+      <AnimatePresence>
+        {selectedSessionForReview && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="review-modal-title"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-2xl max-h-[85vh] bg-surface border border-border rounded-3xl p-6 sm:p-8 flex flex-col space-y-6 shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4 pb-4 border-b border-border">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {selectedSessionForReview.mode === 'timed' ? '⏱️ Timed CBT Exam' : '💡 Tutor Practice'}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {selectedSessionForReview.date}
+                    </span>
+                  </div>
+                  <h2 id="review-modal-title" className="text-xl sm:text-2xl font-black tracking-tight text-text">
+                    {selectedSessionForReview.courseTitle}
+                  </h2>
+                  <p className="text-xs text-muted">
+                    {selectedSessionForReview.topicTitle}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSessionForReview(null)}
+                  className="p-2 rounded-xl border border-border hover:border-accent bg-bg text-muted hover:text-text transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Score Analytics Card */}
+              <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-bg border border-border/80 text-center">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Score</span>
+                  <div className="text-xl sm:text-2xl font-black text-text">
+                    {selectedSessionForReview.score} / {selectedSessionForReview.total}
+                  </div>
+                  <span className="text-[10px] text-muted">Questions</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Accuracy</span>
+                  <div className={`text-xl sm:text-2xl font-black ${
+                    selectedSessionForReview.percentage >= 70 ? 'text-emerald-500' : 'text-amber-500'
+                  }`}>
+                    {selectedSessionForReview.percentage}%
+                  </div>
+                  <span className="text-[10px] text-muted">
+                    {selectedSessionForReview.percentage >= 70 ? 'Passing Grade' : 'Needs Review'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted block mb-1">Status</span>
+                  <div className="text-sm sm:text-base font-extrabold text-accent pt-1">
+                    {selectedSessionForReview.percentage >= 70 ? 'Mastered 🎯' : 'Keep Drilling ⚡'}
+                  </div>
+                  <span className="text-[10px] text-muted">Benchmarked</span>
+                </div>
+              </div>
+
+              {/* Scrollable Questions & Rationales Review */}
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
+                {sessionReviewLoading ? (
+                  <div className="py-12 text-center space-y-2">
+                    <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-xs text-muted">Loading question rationales & solutions...</p>
+                  </div>
+                ) : sessionReviewQuestions.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-xs font-bold text-muted px-1">
+                      <span>Questions & Detailed Solutions ({sessionReviewQuestions.length})</span>
+                      <span className="text-[11px] text-accent">Review mistakes & correct choices</span>
+                    </div>
+
+                    {sessionReviewQuestions.map((q, idx) => {
+                      const isCorrect = q.chosen && q.chosen.toUpperCase() === (q.correct_answer || '').toUpperCase()
+
+                      return (
+                        <div key={q.id || idx} className="border border-border bg-surface p-4 sm:p-5 rounded-2xl space-y-3 shadow-2xs">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="text-xs font-black text-muted">
+                              #{idx + 1}
+                            </span>
+                            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                              isCorrect
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                            }`}>
+                              {isCorrect ? 'Correct ✓' : 'Incorrect ✗'}
+                            </span>
+                          </div>
+
+                          <p className="text-sm font-semibold text-text leading-snug">
+                            {q.question_text}
+                          </p>
+
+                          {/* Options Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                            {[
+                              { key: 'A', text: q.option_a },
+                              { key: 'B', text: q.option_b },
+                              { key: 'C', text: q.option_c },
+                              { key: 'D', text: q.option_d },
+                            ].filter((o) => Boolean(o.text)).map((opt) => {
+                              const isStudentPick = q.chosen?.toUpperCase() === opt.key
+                              const isRightAnswer = q.correct_answer?.toUpperCase() === opt.key
+
+                              let style = 'border-border bg-bg/50 text-muted'
+                              if (isRightAnswer) {
+                                style = 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-bold'
+                              } else if (isStudentPick && !isRightAnswer) {
+                                style = 'border-rose-500/40 bg-rose-500/10 text-rose-400 font-bold'
+                              }
+
+                              return (
+                                <div key={opt.key} className={`p-2.5 rounded-xl border flex items-start gap-2 ${style}`}>
+                                  <span className="font-black shrink-0">{opt.key}.</span>
+                                  <span className="flex-1 leading-snug">{opt.text}</span>
+                                  {isStudentPick && (
+                                    <span className="text-[10px] uppercase font-bold shrink-0">
+                                      (Your Pick)
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Explanation Rationale */}
+                          {q.explanation && (
+                            <div className="p-3 rounded-xl bg-accent/5 border border-accent/15 text-xs space-y-1">
+                              <span className="font-black text-accent uppercase tracking-wider text-[10px] block">
+                                Clinical Rationale:
+                              </span>
+                              <p className="text-muted leading-relaxed">
+                                {q.explanation}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="border border-dashed border-border rounded-2xl p-8 text-center space-y-2">
+                    <span className="text-2xl">📝</span>
+                    <p className="text-sm font-bold text-text">Session summary recorded</p>
+                    <p className="text-xs text-muted max-w-sm mx-auto">
+                      Detailed question-by-question rationales are available for full CBT mock exams submitted to the server.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSessionForReview(null)
+                    handleRetakeSession(selectedSessionForReview)
+                  }}
+                  className="bg-primary text-on-primary px-4 py-2 text-xs sm:text-sm font-bold rounded-xl hover:opacity-95 transition flex items-center gap-1.5"
+                >
+                  <PlayIcon className="w-3.5 h-3.5" />
+                  <span>Retake This Session</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSessionForReview(null)}
+                  className="border border-border hover:border-accent bg-bg text-text px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition"
+                >
+                  Close
                 </button>
               </div>
             </motion.div>

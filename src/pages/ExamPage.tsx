@@ -246,6 +246,21 @@ export function ExamPage() {
         }
       })
 
+      // Record practice session in Supabase so it registers as a completed attempt (consuming free trial & logging stats)
+      try {
+        const qIds = questions.map((q) => q.id)
+        await supabase.rpc('record_practice_attempt', {
+          p_question_ids: qIds,
+          p_answers: currentAnswers,
+          p_score: correctScore,
+          p_total: questions.length,
+        })
+        // Refresh auth profile so dashboard and navigation immediately update trial status
+        await refreshProfile()
+      } catch (saveErr) {
+        console.warn('[ExamPage] Could not record practice attempt in DB:', saveErr)
+      }
+
       clearStoredExam()
       setResultsData({
         score: correctScore,
@@ -366,7 +381,7 @@ export function ExamPage() {
     let isFinished = false
     const savedAttemptId = getStoredAttemptId()
 
-    if (!savedAttemptId) {
+    if (isTutorMode || !savedAttemptId) {
       return
     }
 
@@ -483,8 +498,9 @@ export function ExamPage() {
 
     try {
       const searchParams = new URLSearchParams(window.location.search)
-      const requestedCount = parseInt(searchParams.get('count') || '20', 10)
-      const validCount = !isNaN(requestedCount) && requestedCount > 0 ? requestedCount : 20
+      // Free trial users get exactly 25 questions in their single take
+      const requestedCount = parseInt(searchParams.get('count') || (isActive ? '20' : '25'), 10)
+      const validCount = !isActive ? 25 : (!isNaN(requestedCount) && requestedCount > 0 ? requestedCount : 20)
       const tutorModeActive = searchParams.get('mode') === 'tutor'
       setIsTutorMode(tutorModeActive)
 
@@ -743,8 +759,8 @@ export function ExamPage() {
   // -------------------------------------------------------------
   if (phase === 'start') {
     const searchParams = new URLSearchParams(window.location.search)
-    const urlCount = parseInt(searchParams.get('count') || '20', 10)
-    const displayCount = !isNaN(urlCount) && urlCount > 0 ? urlCount : 20
+    const urlCount = parseInt(searchParams.get('count') || (isActive ? '20' : '25'), 10)
+    const displayCount = !isActive ? 25 : (!isNaN(urlCount) && urlCount > 0 ? urlCount : 20)
     const displayCourse = searchParams.get('course') || 'Nursing Examination'
     const displayMode = searchParams.get('mode') === 'tutor' ? 'Tutor & Study Mode' : 'Timed Computer-Based Test'
 
@@ -882,19 +898,19 @@ export function ExamPage() {
             </div>
           </div>
 
-          {/* Action buttons & Free Trial Completion Banner */}
+          {/* Action buttons & Free Trial Completion Banner with Meal Value Hook */}
           {!isActive && (
-            <div className="border border-primary/30 bg-primary/10 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="border border-emerald-500/30 bg-emerald-500/10 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base">🎉</span>
-                  <span className="font-extrabold text-sm text-text">Free Trial Exam Completed!</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                    Results Unlocked
+                  <span className="font-extrabold text-sm text-text">You've completed your 25-question trial exam!</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
+                    Trial Review
                   </span>
                 </div>
                 <p className="text-xs text-muted leading-relaxed">
-                  Review all your solutions and clinical rationales below. To practice more courses, full mock exams, and custom drills, activate Pro membership for ₦1,050.
+                  Review all your solutions and rationales below. Keep your momentum going—unlock the entire question bank, unlimited timed CBT mock blocks, and all courses for just <strong className="text-text font-bold">₦1,050</strong> (less than the price of a single meal 🍛).
                 </p>
               </div>
               <button
@@ -902,7 +918,7 @@ export function ExamPage() {
                 onClick={() => navigate('/pay')}
                 className="bg-primary text-on-primary px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl hover:opacity-95 shrink-0 transition flex items-center gap-1.5 shadow-sm"
               >
-                <span>Upgrade to Pro (₦1,050)</span>
+                <span>Unlock Full Access (₦1,050)</span>
                 <span className="text-xs">→</span>
               </button>
             </div>

@@ -6,15 +6,10 @@ import { supabase } from '../lib/supabase'
 
 export function PayPage() {
   const navigate = useNavigate()
-  const { loading: authLoading, isActive, signOut } = useAuth()
+  const { loading: authLoading, isActive } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isSubmittingRef = useRef(false)
   const paymentAmount = import.meta.env.VITE_PAYMENT_AMOUNT || ''
-
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
 
   const handlePay = async () => {
     if (isSubmittingRef.current) return
@@ -93,12 +88,22 @@ export function PayPage() {
 
           <button
             type="button"
-            onClick={handleSignOut}
+            onClick={() => navigate('/app')}
             disabled={isSubmitting}
-            className="w-full border border-border hover:border-accent bg-surface text-text py-2.5 text-sm font-semibold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98]"
+            className="w-full border border-border hover:border-accent bg-surface text-text py-2.5 text-sm font-semibold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98] inline-flex items-center justify-center gap-1.5"
           >
-            Sign out
+            <span>←</span>
+            <span>Back to Dashboard</span>
           </button>
+
+          <a
+            href="https://wa.me/2348103128721?text=Hello%20NursingPrep%20Support%2C%20I%20need%20help%20with%20my%20payment%20or%20account%20activation."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 text-sm font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-2"
+          >
+            <span>💬 Contact Support on WhatsApp</span>
+          </a>
         </div>
       </div>
     </div>

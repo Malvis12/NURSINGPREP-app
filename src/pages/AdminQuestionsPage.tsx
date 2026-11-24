@@ -969,6 +969,7 @@ export function AdminQuestionsPage() {
               className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">All Levels</option>
+              <option value="100">Level 100</option>
               <option value="200">Level 200</option>
               <option value="300">Level 300</option>
               <option value="400">Level 400</option>

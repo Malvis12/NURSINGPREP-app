@@ -257,6 +257,9 @@ export function AdminOverviewPage() {
                     {approvedCount} approved
                   </span>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
+                    100L: {byLevel['100'] ?? 0}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">
                     200L: {byLevel['200'] ?? 0}
                   </span>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface border border-border text-muted">

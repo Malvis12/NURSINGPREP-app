@@ -251,6 +251,7 @@ export function AdminStudentsPage() {
             className="border border-border bg-bg text-text px-3 py-2 text-xs font-semibold rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <option value="">All Levels</option>
+            <option value="100">100 Level</option>
             <option value="200">200 Level</option>
             <option value="300">300 Level</option>
             <option value="400">400 Level</option>
