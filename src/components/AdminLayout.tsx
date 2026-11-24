@@ -2,17 +2,19 @@ import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { LayoutDashboard, FileQuestion, Calendar, Trophy, Users, CreditCard } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { ThemeToggle } from './ThemeToggle'
 
 // Shared navigation items between desktop sidebar and mobile slide-in panel
 const ADMIN_NAV_ITEMS = [
-  { name: 'Overview', path: '/admin', end: true, icon: '◈' },
-  { name: 'Questions', path: '/admin/questions', end: false, icon: '☷' },
-  { name: 'Timetable', path: '/admin/timetable', end: false, icon: '📅' },
-  { name: 'Students', path: '/admin/students', end: false, icon: '👥' },
-  { name: 'Payments', path: '/admin/payments', end: false, icon: '💳' },
+  { name: 'Overview', path: '/admin', end: true, Icon: LayoutDashboard },
+  { name: 'Questions', path: '/admin/questions', end: false, Icon: FileQuestion },
+  { name: 'Timetable', path: '/admin/timetable', end: false, Icon: Calendar },
+  { name: 'Leaderboard', path: '/admin/leaderboard', end: false, Icon: Trophy },
+  { name: 'Students', path: '/admin/students', end: false, Icon: Users },
+  { name: 'Payments', path: '/admin/payments', end: false, Icon: CreditCard },
 ] as const
 
 export function AdminLayout() {
@@ -107,7 +109,7 @@ export function AdminLayout() {
               }
             >
               <span className="text-base select-none" aria-hidden="true">
-                {item.icon}
+                <item.Icon className="w-4 h-4 shrink-0" />
               </span>
               <span>{item.name}</span>
             </NavLink>
@@ -194,7 +196,7 @@ export function AdminLayout() {
                       }
                     >
                       <span className="text-base select-none" aria-hidden="true">
-                        {item.icon}
+                        <item.Icon className="w-4 h-4 shrink-0" />
                       </span>
                       <span>{item.name}</span>
                     </NavLink>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { MessageCircle } from 'lucide-react'
 import { ThemeToggle } from '../components/ThemeToggle'
 
 export function LandingPage() {
@@ -230,7 +231,8 @@ export function LandingPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 text-sm font-bold rounded-xl shadow-sm transition active:scale-[0.98]"
               >
-                <span>💬 Contact Support on WhatsApp</span>
+                <MessageCircle className="w-4 h-4" />
+                <span>Contact Support on WhatsApp</span>
               </a>
             </div>
           </div>

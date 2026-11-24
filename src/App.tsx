@@ -20,6 +20,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ 
 const ExamPage = lazy(() => import('./pages/ExamPage').then((m) => ({ default: m.ExamPage })))
 const FlashcardsPage = lazy(() => import('./pages/FlashcardsPage').then((m) => ({ default: m.FlashcardsPage })))
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then((m) => ({ default: m.LeaderboardPage })))
 const LockedAccountPage = lazy(() => import('./pages/LockedAccountPage').then((m) => ({ default: m.LockedAccountPage })))
 
 // Lazy-loaded admin routes
@@ -29,6 +30,7 @@ const AdminStudentsPage = lazy(() => import('./pages/AdminStudentsPage').then((m
 const AdminQuestionsPage = lazy(() => import('./pages/AdminQuestionsPage').then((m) => ({ default: m.AdminQuestionsPage })))
 const AdminPaymentsPage = lazy(() => import('./pages/AdminPaymentsPage').then((m) => ({ default: m.AdminPaymentsPage })))
 const AdminTimetablePage = lazy(() => import('./pages/AdminTimetablePage').then((m) => ({ default: m.AdminTimetablePage })))
+const AdminLeaderboardPage = lazy(() => import('./pages/AdminLeaderboardPage').then((m) => ({ default: m.AdminLeaderboardPage })))
 
 function RouteLoading() {
   return (
@@ -115,6 +117,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/app/leaderboard"
+                  element={
+                    <ProtectedRoute requireLevel>
+                      <LeaderboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/admin"
                   element={
                     <AdminRoute>
@@ -127,6 +137,7 @@ export default function App() {
                   <Route path="students" element={<AdminStudentsPage />} />
                   <Route path="questions" element={<AdminQuestionsPage />} />
                   <Route path="timetable" element={<AdminTimetablePage />} />
+                  <Route path="leaderboard" element={<AdminLeaderboardPage />} />
                   <Route path="payments" element={<AdminPaymentsPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />

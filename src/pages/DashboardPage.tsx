@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Trophy, User, Clock, Eye, LogOut, Shield } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../contexts/AuthContext'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { MobileBottomNav } from '../components/MobileBottomNav'
 import { supabase } from '../lib/supabase'
 
 // ============================================================================
@@ -1080,15 +1082,15 @@ export function DashboardPage() {
           </div>
 
           {/* Right Header Controls */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Pro Status Pill - only shown when user actually has an active subscription */}
             {isActive && (
               <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-bold border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                 title="Your full clinical membership is active"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="hidden xs:inline">Pro</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="hidden sm:inline">Pro</span>
               </div>
             )}
 
@@ -1096,22 +1098,33 @@ export function DashboardPage() {
             {isAdmin && (
               <Link
                 to="/admin"
-                className="text-xs font-bold text-accent hover:underline hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-accent/20 bg-accent/5"
+                className="h-8 text-xs font-bold text-accent hover:bg-accent/10 hidden md:inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-accent/20 bg-accent/5 transition-colors"
               >
-                Admin
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin</span>
               </Link>
             )}
 
             {/* Light/Dark Mode Switcher */}
             <ThemeToggle />
 
+            {/* Leaderboard Link */}
+            <Link
+              to="/app/leaderboard"
+              aria-label="Cohort Leaderboard"
+              className="h-8 border border-border hover:border-accent bg-bg/60 hover:bg-surface text-text px-2.5 text-xs font-semibold rounded-lg motion-safe:transition-all motion-safe:active:scale-[0.98] inline-flex items-center gap-1.5"
+            >
+              <Trophy className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline">Leaderboard</span>
+            </Link>
+
             {/* Compact Profile Link */}
             <Link
               to="/app/profile"
               aria-label="Profile and Settings"
-              className="border border-border hover:border-accent bg-surface text-text px-3 py-1.5 text-xs font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] inline-flex items-center gap-1.5"
+              className="h-8 border border-border hover:border-accent bg-bg/60 hover:bg-surface text-text px-2.5 text-xs font-semibold rounded-lg motion-safe:transition-all motion-safe:active:scale-[0.98] inline-flex items-center gap-1.5"
             >
-              <span>👤</span>
+              <User className="w-3.5 h-3.5 text-muted" />
               <span className="hidden sm:inline">Profile</span>
             </Link>
 
@@ -1120,9 +1133,11 @@ export function DashboardPage() {
               type="button"
               onClick={handleSignOut}
               aria-label="Sign out"
-              className="border border-border hover:border-accent bg-surface text-text px-3 py-1.5 text-xs font-semibold rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              title="Sign out"
+              className="h-8 border border-border hover:border-rose-500/40 hover:text-rose-500 bg-bg/60 hover:bg-surface text-muted px-2.5 text-xs font-semibold rounded-lg motion-safe:transition-all motion-safe:active:scale-[0.98] inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              Sign out
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Sign out</span>
             </button>
           </div>
         </div>
@@ -1244,8 +1259,9 @@ export function DashboardPage() {
               {nextUpcomingExam && (
                 <div className="pt-2">
                   <div className="inline-flex flex-wrap items-center gap-2 p-2 px-3 rounded-xl bg-accent/10 border border-accent/20 text-xs">
-                    <span className="font-black text-accent uppercase tracking-wider text-[10px]">
-                      ⏰ Next Exam:
+                    <span className="font-black text-accent uppercase tracking-wider text-[10px] inline-flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>Next Exam:</span>
                     </span>
                     <strong className="text-text font-bold">
                       {nextUpcomingExam.course_code}
@@ -1625,7 +1641,10 @@ export function DashboardPage() {
                       <td className="py-4 px-4 sm:px-6">
                         <div className="font-bold text-text group-hover:text-accent transition-colors flex items-center gap-1.5">
                           <span>{sess.courseTitle}</span>
-                          <span className="text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">👁️ Review</span>
+                          <span className="text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            <span>Review</span>
+                          </span>
                         </div>
                         <div className="text-xs text-muted">{sess.topicTitle}</div>
                       </td>
@@ -1757,51 +1776,7 @@ export function DashboardPage() {
       {/* ==================================================================== */}
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       {/* ==================================================================== */}
-      <nav aria-label="Mobile Navigation" className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border px-3 py-2">
-        <div className="flex items-center justify-around max-w-md mx-auto">
-          <Link
-            to="/app"
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-accent"
-          >
-            <span className="text-base">🏠</span>
-            <span>Dashboard</span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleQuickStandardExam}
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
-          >
-            <span className="text-base">⚡</span>
-            <span>Quick CBT</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOpenSetup()}
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
-          >
-            <span className="text-base">⚙️</span>
-            <span>Custom Drill</span>
-          </button>
-
-          <Link
-            to="/app/flashcards"
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
-          >
-            <span className="text-base">🗂️</span>
-            <span>Flashcards</span>
-          </Link>
-
-          <Link
-            to="/app/profile"
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
-          >
-            <span className="text-base">👤</span>
-            <span>Profile</span>
-          </Link>
-        </div>
-      </nav>
+      <MobileBottomNav />
 
       {/* ==================================================================== */}
       {/* PRACTICE SETUP MODAL / DRAWER */}

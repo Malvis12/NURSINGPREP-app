@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { MobileBottomNav } from '../components/MobileBottomNav'
 
 export function ProfilePage() {
   const navigate = useNavigate()
@@ -283,31 +284,7 @@ export function ProfilePage() {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav aria-label="Mobile Navigation" className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border px-3 py-2">
-        <div className="flex items-center justify-around max-w-md mx-auto">
-          <Link
-            to="/app"
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
-          >
-            <span className="text-base">🏠</span>
-            <span>Dashboard</span>
-          </Link>
-          <Link
-            to="/app/flashcards"
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-text hover:text-accent"
-          >
-            <span className="text-base">🗂️</span>
-            <span>Flashcards</span>
-          </Link>
-          <Link
-            to="/app/profile"
-            className="flex flex-col items-center gap-1 text-[11px] font-bold text-accent"
-          >
-            <span className="text-base">👤</span>
-            <span>Profile</span>
-          </Link>
-        </div>
-      </nav>
+      <MobileBottomNav />
     </div>
   )
 }

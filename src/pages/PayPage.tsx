@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { MessageCircle, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -92,7 +93,7 @@ export function PayPage() {
             disabled={isSubmitting}
             className="w-full border border-border hover:border-accent bg-surface text-text py-2.5 text-sm font-semibold rounded-xl motion-safe:transition-transform motion-safe:active:scale-[0.98] inline-flex items-center justify-center gap-1.5"
           >
-            <span>←</span>
+            <ArrowLeft className="w-4 h-4" />
             <span>Back to Dashboard</span>
           </button>
 
@@ -102,7 +103,8 @@ export function PayPage() {
             rel="noopener noreferrer"
             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 text-sm font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-2"
           >
-            <span>💬 Contact Support on WhatsApp</span>
+            <MessageCircle className="w-4 h-4" />
+            <span>Contact Support on WhatsApp</span>
           </a>
         </div>
       </div>

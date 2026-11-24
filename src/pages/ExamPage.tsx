@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { Award, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -903,14 +904,14 @@ export function ExamPage() {
             <div className="border border-emerald-500/30 bg-emerald-500/10 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-base">🎉</span>
-                  <span className="font-extrabold text-sm text-text">You've completed your 25-question trial exam!</span>
+                  <Award className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="font-extrabold text-sm text-text">You've completed your 25-question trial exam</span>
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
                     Trial Review
                   </span>
                 </div>
                 <p className="text-xs text-muted leading-relaxed">
-                  Review all your solutions and rationales below. Keep your momentum going—unlock the entire question bank, unlimited timed CBT mock blocks, and all courses for just <strong className="text-text font-bold">₦1,050</strong> (less than the price of a single meal 🍛).
+                  Review all your solutions and rationales below. Keep your momentum going—unlock the entire question bank, unlimited timed CBT mock blocks, and all courses for just <strong className="text-text font-bold">₦1,050</strong> (less than the price of a single meal).
                 </p>
               </div>
               <button
@@ -919,7 +920,7 @@ export function ExamPage() {
                 className="bg-primary text-on-primary px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl hover:opacity-95 shrink-0 transition flex items-center gap-1.5 shadow-sm"
               >
                 <span>Unlock Full Access (₦1,050)</span>
-                <span className="text-xs">→</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
