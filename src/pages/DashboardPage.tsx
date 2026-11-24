@@ -407,6 +407,43 @@ export function DashboardPage() {
 
     async function fetchLiveCourses() {
       try {
+        // 1. Try high-performance security-definer RPC that aggregates real approved counts
+        const { data: rpcCatalog, error: rpcErr } = await supabase.rpc('get_curriculum_catalog')
+
+        if (!rpcErr && Array.isArray(rpcCatalog) && rpcCatalog.length > 0 && active) {
+          const dynamicCourses: CourseItem[] = rpcCatalog.map((c: any) => {
+            const levelNum = Number(c.level_code || 300)
+            const topicItems: TopicItem[] = [
+              { id: 'all', name: 'All Topics (Comprehensive)', questionCount: Number(c.total_questions) || 0 },
+              ...(Array.isArray(c.topics)
+                ? c.topics.map((t: any, i: number) => ({
+                    id: `topic-${i}`,
+                    name: t.name || 'General Topic',
+                    questionCount: Number(t.count) || 0,
+                  }))
+                : []),
+            ]
+
+            return {
+              id: c.id,
+              code: c.code,
+              title: c.title,
+              category: 'Core Competency',
+              description: c.description || 'Clinical assessment, diagnoses, and licensure preparation.',
+              levels: [levelNum],
+              totalQuestions: Number(c.total_questions) || 0,
+              masteryPercentage: 0,
+              isHighYield: Number(c.total_questions) > 30,
+              icon: 'medsurg',
+              topics: topicItems,
+            }
+          })
+
+          setLiveDbCourses(dynamicCourses)
+          return
+        }
+
+        // 2. Fallback direct table query if RPC is not yet executed in Supabase SQL editor
         const { data: coursesData, error: coursesErr } = await supabase
           .from('courses')
           .select('id, title, code, description, level_id, is_active, academic_levels(code)')
