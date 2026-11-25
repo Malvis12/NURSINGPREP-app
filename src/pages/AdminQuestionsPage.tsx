@@ -43,9 +43,10 @@ export interface AcademicLevelOption {
 
 export function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<QuestionRow[]>([])
+  const [totalCount, setTotalCount] = useState<number>(0)
   const [courses, setCourses] = useState<CourseOption[]>([])
   const [academicLevels, setAcademicLevels] = useState<AcademicLevelOption[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>('all')
   const [selectedLevelFilter, setSelectedLevelFilter] = useState<string>('all')
@@ -231,8 +232,22 @@ export function AdminQuestionsPage() {
     }
   }
 
+  const loadTotalCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('questions')
+        .select('*', { count: 'exact', head: true })
+      if (!error && count !== null) {
+        setTotalCount(count)
+      }
+    } catch (err) {
+      console.error('Error loading total question count:', err)
+    }
+  }
+
   useEffect(() => {
     void loadCoursesAndLevels()
+    void loadTotalCount()
   }, [])
 
   // Create New Course Handler
@@ -284,9 +299,16 @@ export function AdminQuestionsPage() {
     }
   }
 
-  // 2. Fetch questions list (chunked to bypass PostgREST's 1,000 row hard limit)
-  const loadQuestions = async () => {
+  // 2. Fetch questions list for the selected course (chunked to bypass PostgREST's 1,000 row hard limit)
+  const loadQuestions = async (courseId: string = selectedCourseFilter) => {
+    if (!courseId || courseId === 'all') {
+      setQuestions([])
+      setIsLoading(false)
+      void loadTotalCount()
+      return
+    }
     setIsLoading(true)
+    void loadTotalCount()
     try {
       const allLoaded: any[] = []
       const pageSize = 1000
@@ -321,6 +343,7 @@ export function AdminQuestionsPage() {
               )
             )
           `)
+          .eq('course_id', courseId)
           .order('created_at', { ascending: false })
           .range(from, to)
 
@@ -354,6 +377,7 @@ export function AdminQuestionsPage() {
           const { data: flatData, error: flatError } = await supabase
             .from('questions')
             .select('id, course_id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, topic, status, created_at')
+            .eq('course_id', courseId)
             .order('created_at', { ascending: false })
             .range(from, to)
 
@@ -399,8 +423,13 @@ export function AdminQuestionsPage() {
   }
 
   useEffect(() => {
-    void loadQuestions()
-  }, [])
+    if (selectedCourseFilter === 'all') {
+      setQuestions([])
+      setIsLoading(false)
+    } else {
+      void loadQuestions(selectedCourseFilter)
+    }
+  }, [selectedCourseFilter])
 
   // Filtered Questions
   const filteredQuestions = useMemo(() => {
@@ -1010,7 +1039,11 @@ export function AdminQuestionsPage() {
             </button>
           ))}
           <span className="ml-auto text-xs font-semibold text-muted">
-            Showing <strong className="text-text">{filteredQuestions.length}</strong> questions
+            {selectedCourseFilter === 'all' ? (
+              <>Total <strong className="text-text">{totalCount}</strong> questions in bank</>
+            ) : (
+              <>Showing <strong className="text-text">{filteredQuestions.length}</strong> of <strong className="text-text">{totalCount}</strong> total questions</>
+            )}
           </span>
         </div>
       </div>
@@ -1021,6 +1054,14 @@ export function AdminQuestionsPage() {
           <div className="py-16 text-center space-y-3">
             <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-xs sm:text-sm text-muted font-medium">Loading question bank...</p>
+          </div>
+        ) : selectedCourseFilter === 'all' ? (
+          <div className="py-16 text-center space-y-3 p-6">
+            <div className="text-3xl">📚</div>
+            <h3 className="font-extrabold text-lg">Select a course to view questions</h3>
+            <p className="text-xs sm:text-sm text-muted max-w-md mx-auto">
+              There are <strong className="text-text">{totalCount}</strong> total questions in the bank. Choose a course from the dropdown above to load and manage its questions without lag.
+            </p>
           </div>
         ) : filteredQuestions.length === 0 ? (
           <div className="py-16 text-center space-y-3 p-6">
