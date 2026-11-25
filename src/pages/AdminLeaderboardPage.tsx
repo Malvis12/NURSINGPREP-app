@@ -16,23 +16,45 @@ interface LeaderboardEntry {
   points: number
 }
 
+interface CourseOption {
+  id: string
+  code: string
+  title: string
+}
+
 export function AdminLeaderboardPage() {
   const [selectedLevel, setSelectedLevel] = useState<'100' | '200' | '300' | '400'>('200')
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [prizeText, setPrizeText] = useState('')
+  const [challengeCourseId, setChallengeCourseId] = useState<string>('')
+  const [courses, setCourses] = useState<CourseOption[]>([])
+  const [filterByChallengeCourse, setFilterByChallengeCourse] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingPrize, setIsSavingPrize] = useState(false)
 
-  const loadLeaderboard = async (lvl: string) => {
+  useEffect(() => {
+    supabase
+      .from('courses')
+      .select('id, code, title')
+      .eq('is_active', true)
+      .order('code')
+      .then(({ data }) => {
+        if (data) setCourses(data)
+      })
+  }, [])
+
+  const loadLeaderboard = async (lvl: string, courseId?: string) => {
     setIsLoading(true)
     try {
       const { data, error } = await supabase.rpc('get_level_leaderboard', {
         p_level_code: lvl,
+        ...(courseId ? { p_course_id: courseId } : {}),
       })
       if (error) throw error
       if (data) {
         setEntries(data.entries || [])
         setPrizeText(data.prize_text || '')
+        setChallengeCourseId(data.challenge_course_id || '')
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to load leaderboard')
@@ -42,8 +64,8 @@ export function AdminLeaderboardPage() {
   }
 
   useEffect(() => {
-    void loadLeaderboard(selectedLevel)
-  }, [selectedLevel])
+    void loadLeaderboard(selectedLevel, filterByChallengeCourse && challengeCourseId ? challengeCourseId : undefined)
+  }, [selectedLevel, filterByChallengeCourse])
 
   const handleSavePrize = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,9 +73,10 @@ export function AdminLeaderboardPage() {
     try {
       const { error } = await supabase.rpc('admin_update_leaderboard_prize', {
         p_prize_text: prizeText,
+        p_challenge_course_id: challengeCourseId || null,
       })
       if (error) throw error
-      toast.success('Leaderboard prize announcement updated!')
+      toast.success('Leaderboard prize & challenge course updated!')
     } catch (err: any) {
       toast.error(err.message || 'Failed to update prize')
     } finally {
@@ -101,19 +124,47 @@ export function AdminLeaderboardPage() {
         </div>
       </div>
 
-      {/* Prize Configuration Card */}
+      {/* Prize & Challenge Course Configuration Card */}
       <form onSubmit={handleSavePrize} className="border border-border bg-surface p-5 rounded-2xl space-y-3 shadow-xs">
-        <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-accent">
-          <Award className="w-4 h-4" />
-          <span>End-of-Exams Prize Announcement</span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-accent">
+            <Award className="w-4 h-4" />
+            <span>Course Challenge &amp; Prize Announcement</span>
+          </div>
+          {challengeCourseId && (
+            <button
+              type="button"
+              onClick={() => setFilterByChallengeCourse((prev) => !prev)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold border transition ${
+                filterByChallengeCourse
+                  ? 'bg-accent text-on-accent border-accent'
+                  : 'bg-bg text-muted border-border hover:text-text'
+              }`}
+            >
+              {filterByChallengeCourse ? 'Showing Challenge Course Only' : 'Filter by Challenge Course'}
+            </button>
+          )}
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select
+            aria-label="Challenge Course"
+            value={challengeCourseId}
+            onChange={(e) => setChallengeCourseId(e.target.value)}
+            className="bg-bg border border-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">All Courses (Overall Level)</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code} — {c.title}
+              </option>
+            ))}
+          </select>
           <input
             type="text"
             value={prizeText}
             onChange={(e) => setPrizeText(e.target.value)}
-            placeholder="e.g. Top student in each level wins ₦20,000 cash + stethoscope!"
-            className="flex-1 bg-bg border border-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="e.g. Top student in NSC 405 wins ₦20,000!"
+            className="bg-bg border border-border rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             type="submit"
@@ -121,7 +172,7 @@ export function AdminLeaderboardPage() {
             className="bg-primary text-on-primary px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl hover:opacity-95 disabled:opacity-50 transition inline-flex items-center justify-center gap-2 shrink-0"
           >
             <Save className="w-4 h-4" />
-            <span>{isSavingPrize ? 'Saving...' : 'Save Prize'}</span>
+            <span>{isSavingPrize ? 'Saving...' : 'Save Settings'}</span>
           </button>
         </div>
       </form>

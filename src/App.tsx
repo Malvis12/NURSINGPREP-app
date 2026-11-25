@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminRoute } from './components/AdminRoute'
 import { useSessionGuard } from './hooks/useSessionGuard'
+import { useVersionCheck } from './hooks/useVersionCheck'
 import { ExamErrorBoundary } from './components/ExamErrorBoundary'
 
 // Lazy-loaded student routes
@@ -42,6 +43,7 @@ function RouteLoading() {
 
 function SessionGuardWrapper({ children }: { children: React.ReactNode }) {
   useSessionGuard()
+  useVersionCheck()
   return <>{children}</>
 }
 

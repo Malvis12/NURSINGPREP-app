@@ -22,6 +22,9 @@ interface LeaderboardEntry {
 interface LeaderboardResponse {
   level_code: string
   prize_text: string
+  challenge_course_id?: string | null
+  challenge_course_code?: string | null
+  challenge_course_title?: string | null
   entries: LeaderboardEntry[]
   my_rank: LeaderboardEntry | null
 }
@@ -29,6 +32,7 @@ interface LeaderboardResponse {
 export function LeaderboardPage() {
   const { level: authLevel } = useAuth()
   const [data, setData] = useState<LeaderboardResponse | null>(null)
+  const [viewMode, setViewMode] = useState<'overall' | 'challenge'>('challenge')
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -37,9 +41,20 @@ export function LeaderboardPage() {
     async function fetchLeaderboard() {
       setIsLoading(true)
       try {
-        const { data: res, error } = await supabase.rpc('get_level_leaderboard')
-        if (!error && res && active) {
-          setData(res as LeaderboardResponse)
+        // First fetch without course filter to learn if a challenge_course_id is active
+        const { data: baseRes, error: baseErr } = await supabase.rpc('get_level_leaderboard')
+        if (!baseErr && baseRes && active) {
+          const typedBase = baseRes as LeaderboardResponse
+          if (viewMode === 'challenge' && typedBase.challenge_course_id) {
+            const { data: challengeRes, error: chalErr } = await supabase.rpc('get_level_leaderboard', {
+              p_course_id: typedBase.challenge_course_id,
+            })
+            if (!chalErr && challengeRes && active) {
+              setData(challengeRes as LeaderboardResponse)
+              return
+            }
+          }
+          setData(typedBase)
         }
       } catch (err) {
         console.warn('[Leaderboard] Fetch error:', err)
@@ -52,7 +67,7 @@ export function LeaderboardPage() {
     return () => {
       active = false
     }
-  }, [authLevel])
+  }, [authLevel, viewMode])
 
   const levelLabel = data?.level_code || authLevel || 300
   const entries = data?.entries || []
@@ -96,19 +111,50 @@ export function LeaderboardPage() {
           </p>
         </div>
 
-        {/* Subtle Prize Banner */}
-        <div className="border border-accent/25 bg-accent/5 p-4 sm:p-5 rounded-2xl flex items-start sm:items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
-            <Award className="w-5 h-5" />
+        {/* Subtle Prize Banner + Course Challenge Toggle */}
+        <div className="border border-accent/25 bg-accent/5 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center shrink-0">
+              <Award className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-accent block">
+                {data?.challenge_course_code
+                  ? `${data.challenge_course_code} Course Challenge Prize`
+                  : 'End-of-Exams Prize'}
+              </span>
+              <p className="text-xs sm:text-sm font-semibold text-text">
+                {data?.prize_text || 'Top-ranked student at the end of exams wins a special prize.'}
+              </p>
+            </div>
           </div>
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-black uppercase tracking-wider text-accent block">
-              End-of-Exams Prize
-            </span>
-            <p className="text-xs sm:text-sm font-semibold text-text">
-              {data?.prize_text || 'Top-ranked student at the end of exams wins a special prize.'}
-            </p>
-          </div>
+
+          {data?.challenge_course_id && (
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-surface border border-border shrink-0 self-start sm:self-center">
+              <button
+                type="button"
+                onClick={() => setViewMode('challenge')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  viewMode === 'challenge'
+                    ? 'bg-primary text-on-primary shadow-xs'
+                    : 'text-muted hover:text-text'
+                }`}
+              >
+                {data.challenge_course_code} Challenge
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('overall')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  viewMode === 'overall'
+                    ? 'bg-primary text-on-primary shadow-xs'
+                    : 'text-muted hover:text-text'
+                }`}
+              >
+                Overall
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Standings Table */}

@@ -2,9 +2,20 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vitest/config'
 
+const versionPlugin = () => ({
+  name: 'version-json',
+  generateBundle(this: { emitFile: (file: { type: 'asset'; fileName: string; source: string }) => void }) {
+    this.emitFile({
+      type: 'asset',
+      fileName: 'version.json',
+      source: JSON.stringify({ version: Date.now().toString() }),
+    })
+  },
+})
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [tailwindcss(), react()],
+  plugins: [tailwindcss(), react(), versionPlugin()],
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 600,

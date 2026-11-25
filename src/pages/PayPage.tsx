@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { MessageCircle, ArrowLeft } from 'lucide-react'
+import { MessageCircle, ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -53,17 +53,32 @@ export function PayPage() {
   return (
     <div className="min-h-screen bg-bg text-text flex flex-col justify-center items-center p-6">
       <div className="w-full max-w-md border border-border bg-surface p-8 rounded-2xl space-y-6">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="text-xs uppercase font-extrabold tracking-widest text-accent">
-            Access required
+            Full Clinical Access
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">
-            Payment required
+            Unlock unlimited exam prep
           </h1>
-          <p className="text-sm text-muted">
-            Complete the one-time access payment to unlock your dashboard and study materials.
+          <p className="text-sm text-muted leading-relaxed">
+            Continue your preparation with full access to every course, timed mock exam, and detailed rationale.
           </p>
         </div>
+
+        <ul className="space-y-2.5 text-xs sm:text-sm text-text bg-bg/60 border border-border/80 p-4 rounded-xl">
+          <li className="flex items-start gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+            <span>Unlimited Timed CBT &amp; Practice Tutor sessions across all your level courses</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+            <span>Complete question-by-question rationales &amp; past session review</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+            <span>Eligibility for Cohort &amp; Course Challenge Leaderboard prizes</span>
+          </li>
+        </ul>
 
         {paymentAmount && (
           <div className="border border-border bg-bg p-4 rounded-xl text-center space-y-1">
