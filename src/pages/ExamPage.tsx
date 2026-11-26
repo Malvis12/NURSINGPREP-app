@@ -5,6 +5,7 @@ import { Award, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { MathText } from '../components/MathText'
 
 export interface ExamQuestion {
   id: string
@@ -1021,7 +1022,7 @@ export function ExamPage() {
                     </div>
 
                     <p className="font-bold text-base sm:text-lg leading-relaxed text-text">
-                      {questionText}
+                      <MathText text={questionText} />
                     </p>
 
                     {/* All options list with clear marking for choice vs correct */}
@@ -1054,7 +1055,7 @@ export function ExamPage() {
                                 <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 ${badgeClasses}`}>
                                   {opt.key}
                                 </span>
-                                <span className="font-medium leading-relaxed">{opt.text}</span>
+                                <span className="font-medium leading-relaxed"><MathText text={opt.text} /></span>
                               </div>
 
                               <div className="shrink-0 flex items-center gap-1.5 text-xs font-bold">
@@ -1132,7 +1133,7 @@ export function ExamPage() {
                           Explanation
                         </span>
                         <p className="text-sm text-text leading-relaxed">
-                          {item.explanation}
+                          <MathText text={item.explanation} />
                         </p>
                       </div>
                     )}
@@ -1250,7 +1251,7 @@ export function ExamPage() {
           <div className="border border-border bg-surface p-5 sm:p-7 rounded-2xl shadow-sm border-l-4 border-l-accent space-y-2">
             <span className="text-[10px] font-black uppercase tracking-widest text-accent">Clinical Case Stem</span>
             <h2 className="text-base sm:text-xl font-bold leading-relaxed text-text">
-              {currentQuestion.question_text}
+              <MathText text={currentQuestion.question_text} />
             </h2>
           </div>
 
@@ -1296,7 +1297,7 @@ export function ExamPage() {
                     >
                       {opt.key}
                     </span>
-                    <span className="text-sm sm:text-base font-medium leading-relaxed">{opt.text}</span>
+                    <span className="text-sm sm:text-base font-medium leading-relaxed"><MathText text={opt.text} /></span>
                   </div>
 
                   {/* Indicator icon */}
@@ -1343,7 +1344,7 @@ export function ExamPage() {
                 </span>
               </div>
               <p className="text-sm sm:text-base text-text/90 leading-relaxed">
-                {currentQuestion.explanation || 'No rationale available for this question stem.'}
+                <MathText text={currentQuestion.explanation || 'No rationale available for this question stem.'} />
               </p>
             </motion.div>
           )}
